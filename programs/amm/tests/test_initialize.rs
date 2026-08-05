@@ -1,77 +1,39 @@
-// use {
-//     anchor_lang::{
-//         prelude::Pubkey,
-//         solana_program::{instruction::Instruction, system_program},
-//         AccountDeserialize, InstructionData, ToAccountMetas,
-//     },
-//     litesvm::LiteSVM,
-//     solana_keypair::Keypair,
-//     solana_message::{Message, VersionedMessage},
-//     solana_signer::Signer,
-//     solana_transaction::versioned::VersionedTransaction,
-// };
+use ::amm as amm_protocol;
 
-// #[test]
-// fn test_initialize() {
-//     let program_id = amm::id();
-//     let payer = Keypair::new();
-//     let counter = Pubkey::find_program_address(
-//         &[amm::constants::COUNTER_SEED],
-//         &program_id,
-//     )
-//     .0;
-//     let mut svm = LiteSVM::new();
-//     let bytes = include_bytes!(concat!(
-//         env!("CARGO_TARGET_TMPDIR"),
-//         "/../deploy/amm.so"
-//     ));
-//     svm.add_program(program_id, bytes).unwrap();
-//     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+use crate::{
+    amm::{
+        accounts::{protocol_config, protocol_treasury},
+        initialize_protocol,
+        pdas::{find_protocol_config_pda, find_protocol_treasury_pda},
+    },
+    common::context::TestContext,
+};
 
-//     let instruction = Instruction::new_with_bytes(
-//         program_id,
-//         &amm::instruction::Initialize {}.data(),
-//         amm::accounts::Initialize {
-//             payer: payer.pubkey(),
-//             counter,
-//             system_program: system_program::ID,
-//         }
-//         .to_account_metas(None),
-//     );
+mod amm;
+mod common;
 
-//     let blockhash = svm.latest_blockhash();
-//     let msg = Message::new_with_blockhash(&[instruction], Some(&payer.pubkey()), &blockhash);
-//     let tx = VersionedTransaction::try_new(VersionedMessage::Legacy(msg), &[&payer]).unwrap();
+#[test]
+fn initialize_protocol_success() {
+    let program_id = amm_protocol::id();
+    let mut ctx = TestContext::new(program_id);
 
-//     let res = svm.send_transaction(tx);
-//     assert!(res.is_ok());
+    let res = initialize_protocol::initialize_protocol(&mut ctx);
 
-//     let counter_account = svm.get_account(&counter).unwrap();
-//     let mut data: &[u8] = &counter_account.data;
-//     let counter_state = amm::state::Counter::try_deserialize(&mut data).unwrap();
-//     assert_eq!(counter_state.count, 0);
-//     assert_eq!(counter_state.authority, payer.pubkey());
+    assert!(res.is_ok());
 
-//     let instruction = Instruction::new_with_bytes(
-//         program_id,
-//         &amm::instruction::Increment {}.data(),
-//         amm::accounts::Increment {
-//             counter,
-//             authority: payer.pubkey(),
-//         }
-//         .to_account_metas(None),
-//     );
+    let config: ::amm::state::ProtocolConfig = protocol_config(&ctx);
 
-//     let blockhash = svm.latest_blockhash();
-//     let msg = Message::new_with_blockhash(&[instruction], Some(&payer.pubkey()), &blockhash);
-//     let tx = VersionedTransaction::try_new(VersionedMessage::Legacy(msg), &[&payer]).unwrap();
+    assert_eq!(config.admin, ctx.admin.pubkey());
+    assert_eq!(config.pending_admin, None);
+    assert_eq!(
+        config.protocol_treasury,
+        find_protocol_treasury_pda(&program_id).0
+    );
+    assert_eq!(config.swap_fee_bps, 30);
+    assert_eq!(config.treasury_fee_bps, 5);
+    assert!(!config.paused);
+    assert_eq!(config.bump, find_protocol_config_pda(&program_id).1);
 
-//     let res = svm.send_transaction(tx);
-//     assert!(res.is_ok());
-
-//     let counter_account = svm.get_account(&counter).unwrap();
-//     let mut data: &[u8] = &counter_account.data;
-//     let counter_state = amm::state::Counter::try_deserialize(&mut data).unwrap();
-//     assert_eq!(counter_state.count, 1);
-//     assert_eq!(counter_state.authority, payer.pubkey());
-// }
+    let treasury: ::amm::state::ProtocolTreasury = protocol_treasury(&ctx);
+    assert_eq!(treasury.bump, find_protocol_treasury_pda(&program_id).1);
+}

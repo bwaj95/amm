@@ -2,13 +2,14 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub mod state;
+pub mod events;
 
 use anchor_lang::prelude::*;
 
 pub use constants::*;
 pub use instructions::*;
 
-declare_id!("GWEbss74ivW8qifn8pkC5tJcYcXpVsLkBAYpXdN8dVd");
+declare_id!("5MyQPKV12rGp2c3ce3qeA8yk2BdDhVJvBJt6TePeRe5F");
 
 #[program]
 pub mod amm {

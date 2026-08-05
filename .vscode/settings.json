@@ -1,0 +1,18 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "./Cargo.toml"
+  ],
+  "rust-analyzer.cargo.extraEnv": {
+    "CARGO_TARGET_DIR": "./target"
+  },
+  "rust-analyzer.checkOnSave": true,
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.runnables.extraEnv": {
+    "CARGO_TARGET_DIR": "./target"
+  },
+  "rust-analyzer.server.extraEnv": {
+    "RUSTUP_TOOLCHAIN": "1.89.0-x86_64-unknown-linux-gnu"
+  },
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.completion.autoimport.enable": true
+}
