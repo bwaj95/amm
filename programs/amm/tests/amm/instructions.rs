@@ -2,10 +2,17 @@ use ::amm as amm_program;
 use amm_program::{accounts, instruction};
 
 use anchor_lang::{system_program, InstructionData, ToAccountMetas};
+use anchor_spl::{
+    associated_token::{self, get_associated_token_address},
+    token,
+};
 use solana_message::Instruction;
+use solana_pubkey::Pubkey;
 
 use crate::{
-    amm::pdas::{find_protocol_config_pda, find_protocol_treasury_pda},
+    amm::pdas::{
+        find_lp_mint_pda, find_mint_pda, find_pool_pda, find_protocol_config_pda, find_protocol_treasury_pda
+    },
     common::context::TestContext,
 };
 
@@ -31,6 +38,70 @@ pub fn initialize_protocol_ix(ctx: &TestContext) -> Instruction {
             treasury_fee_bps: 5,
         }
         .data(), // data not available in suggesstions. InstructionData import solved. why?
+    };
+
+    instruction
+}
+
+pub fn create_pool_ix(
+    ctx: &TestContext,
+    creator: &Pubkey,
+    mint_a: &Pubkey,
+    mint_b: &Pubkey,
+) -> Instruction {
+    let program_id = &ctx.program_id;
+
+    let (protocol_config, _) = find_protocol_config_pda(program_id);
+    let (pool, _) = find_pool_pda(program_id, mint_a, mint_b);
+    let (lp_mint, _) = find_lp_mint_pda(program_id, &pool);
+
+    let vault_a = get_associated_token_address(&pool, mint_a);
+    let vault_b = get_associated_token_address(&pool, mint_b);
+
+    let accounts = accounts::CreatePool {
+        creator: *creator,
+        pool,
+        protocol_config,
+        mint_a: *mint_a,
+        mint_b: *mint_b,
+        vault_a,
+        vault_b,
+        lp_mint,
+        system_program: system_program::ID,
+        token_program: token::ID,
+        associated_token_program: associated_token::ID,
+    }
+    .to_account_metas(None);
+
+    let instruction = Instruction {
+        program_id: *program_id,
+        accounts,
+        data: instruction::CreatePool {}.data(),
+    };
+
+    instruction
+}
+
+
+pub fn initialize_mint_ix(ctx: &TestContext, admin: &Pubkey, mint_id: u64, decimals: u8) -> Instruction {
+    let program_id = &ctx.program_id;
+
+    let (protocol_config, _) = find_protocol_config_pda(program_id);
+    let (mint_pda, _) = find_mint_pda(program_id, mint_id); 
+
+    let accounts = accounts::InitializeMint {
+        admin: *admin,
+        protocol_config,
+        mint: mint_pda,
+        system_program: system_program::ID,
+        token_program: token::ID,
+    }
+    .to_account_metas(None);
+
+    let instruction = Instruction {
+        program_id: *program_id,
+        accounts,
+        data: instruction::InitializeMint { mint_id, decimals }.data(),
     };
 
     instruction

@@ -7,4 +7,10 @@ pub enum AmmError {
 
     #[msg("Treasury fee cannot exceed swap fee.")]
     InvalidTreasuryFee,
+
+    #[msg("Invalid mint order.")]
+    InvalidMintOrder,
+
+    #[msg("Same mints provided.")]
+    SameMint,
 }

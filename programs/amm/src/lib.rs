@@ -1,8 +1,8 @@
 pub mod constants;
 pub mod error;
+pub mod events;
 pub mod instructions;
 pub mod state;
-pub mod events;
 
 use anchor_lang::prelude::*;
 
@@ -21,5 +21,13 @@ pub mod amm {
         treasury_fee_bps: u16,
     ) -> Result<()> {
         instructions::handler(ctx, swap_fee_bps, treasury_fee_bps)
+    }
+
+    pub fn initialize_mint(ctx: Context<InitializeMint>, mint_id: u64, decimals: u8) -> Result<()> {
+        instructions::initialize_mint_handler(ctx, mint_id, decimals)
+    }
+
+    pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
+        instructions::create_pool_handler(ctx)
     }
 }
