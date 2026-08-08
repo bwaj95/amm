@@ -6,7 +6,7 @@ use anchor_spl::{
 
 use crate::{
     constants::{POOL_SEED, PROTOCOL_CONFIG_SEED},
-    LP_MINT_DECIMALS,
+    LOCKED_LP_SEED, LP_MINT_DECIMALS,
 };
 use crate::{error::AmmError, LP_MINT_SEED};
 use crate::{
@@ -67,6 +67,15 @@ pub struct CreatePool<'info> {
     )]
     pub lp_mint: Account<'info, Mint>,
 
+    #[account(
+    init,
+    payer = creator,
+    token::mint = lp_mint,
+    token::authority = pool,
+    seeds = [LOCKED_LP_SEED, pool.key().as_ref()],
+    bump)]
+    pub locked_lp_token: Account<'info, TokenAccount>,
+
     pub system_program: Program<'info, System>,
 
     pub token_program: Program<'info, Token>,
@@ -82,6 +91,7 @@ pub fn create_pool_handler(ctx: Context<CreatePool>) -> Result<()> {
     pool.vault_a = ctx.accounts.vault_a.key();
     pool.vault_b = ctx.accounts.vault_b.key();
     pool.lp_mint = ctx.accounts.lp_mint.key();
+    pool.locked_lp_token = ctx.accounts.locked_lp_token.key();
     pool.bump = ctx.bumps.pool;
 
     emit!(PoolCreated {
@@ -91,6 +101,7 @@ pub fn create_pool_handler(ctx: Context<CreatePool>) -> Result<()> {
         vault_a: ctx.accounts.vault_a.key(),
         vault_b: ctx.accounts.vault_b.key(),
         lp_mint: ctx.accounts.lp_mint.key(),
+        locked_lp_token: ctx.accounts.locked_lp_token.key(),
     });
 
     Ok(())

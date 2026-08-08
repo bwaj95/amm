@@ -53,3 +53,14 @@ pub fn ata(ctx: &TestContext, ata: &Pubkey) -> TokenAccount {
 
     TokenAccount::try_deserialize(&mut data).unwrap()
 }
+
+pub fn token_account(ctx: &TestContext, pubkey: &Pubkey) -> TokenAccount {
+    let account = ctx
+        .svm
+        .get_account(pubkey)
+        .expect("Token account not found");
+
+    let mut data: &[u8] = &account.data;
+
+    TokenAccount::try_deserialize(&mut data).expect("Failed to deserialize token account")
+}

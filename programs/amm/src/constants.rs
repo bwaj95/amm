@@ -16,6 +16,9 @@ pub const MINT_SEED: &[u8] = b"mint";
 pub const LP_MINT_SEED: &[u8] = b"lp_mint";
 
 #[constant]
+pub const LOCKED_LP_SEED: &[u8] = b"locked_lp";
+
+#[constant]
 pub const MAX_BPS: u16 = 10_000;
 
 #[constant]

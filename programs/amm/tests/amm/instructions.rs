@@ -11,7 +11,7 @@ use solana_pubkey::Pubkey;
 
 use crate::{
     amm::pdas::{
-        find_lp_mint_pda, find_mint_pda, find_pool_pda, find_protocol_config_pda, find_protocol_treasury_pda
+        find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda, find_protocol_config_pda, find_protocol_treasury_pda
     },
     common::context::TestContext,
 };
@@ -54,6 +54,8 @@ pub fn create_pool_ix(
     let (protocol_config, _) = find_protocol_config_pda(program_id);
     let (pool, _) = find_pool_pda(program_id, mint_a, mint_b);
     let (lp_mint, _) = find_lp_mint_pda(program_id, &pool);
+    let (locked_lp_token, _) =
+    find_locked_lp_token_pda(program_id, &pool);
 
     let vault_a = get_associated_token_address(&pool, mint_a);
     let vault_b = get_associated_token_address(&pool, mint_b);
@@ -67,6 +69,7 @@ pub fn create_pool_ix(
         vault_a,
         vault_b,
         lp_mint,
+        locked_lp_token,
         system_program: system_program::ID,
         token_program: token::ID,
         associated_token_program: associated_token::ID,

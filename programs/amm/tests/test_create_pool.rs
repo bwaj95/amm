@@ -4,11 +4,11 @@ use solana_pubkey::Pubkey;
 
 use crate::{
     amm::{
-        accounts::{ata, mint, pool},
+        accounts::{ata, mint, pool, token_account},
         create_pool::create_pool,
         initialize_mint,
         initialize_protocol::initialize_protocol,
-        pdas::{find_lp_mint_pda, find_mint_pda, find_pool_pda},
+        pdas::{find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda},
     },
     common::context::TestContext,
 };
@@ -54,6 +54,8 @@ fn create_pool_success() {
     let pool_account = pool(&ctx, &pool_pda);
     let (lp_mint_pda, _) = find_lp_mint_pda(&program_id, &pool_pda);
     let lp_mint_account = mint(&ctx, &lp_mint_pda);
+    let (locked_lp_token_pda, _) = find_locked_lp_token_pda(&program_id, &pool_pda);
+    let locked_lp_account = token_account(&ctx, &locked_lp_token_pda);
 
     let vault_a_ata = get_associated_token_address(&pool_pda, &mint_a);
     let vault_a_account = ata(&ctx, &vault_a_ata);
@@ -65,10 +67,16 @@ fn create_pool_success() {
     assert_eq!(pool_account.vault_a, vault_a_ata);
     assert_eq!(pool_account.vault_b, vault_b_ata);
     assert_eq!(pool_account.lp_mint, lp_mint_pda);
+    assert_eq!(pool_account.locked_lp_token, locked_lp_token_pda);
     assert_eq!(pool_account.bump, pool_pda_bump);
 
     assert_eq!(lp_mint_account.mint_authority, Some(pool_pda).into());
     assert_eq!(lp_mint_account.decimals, LP_MINT_DECIMALS);
+    assert_eq!(lp_mint_account.supply, 0);
+
+    assert_eq!(locked_lp_account.mint, lp_mint_pda);
+    assert_eq!(locked_lp_account.owner, pool_pda);
+    assert_eq!(locked_lp_account.amount, 0);
 
     assert_eq!(vault_a_account.owner, pool_pda);
     assert_eq!(vault_b_account.owner, pool_pda);
