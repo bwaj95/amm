@@ -13,4 +13,22 @@ pub enum AmmError {
 
     #[msg("Same mints provided.")]
     SameMint,
+
+    #[msg("Pool already initialized.")]
+    PoolAlreadyInitialized,
+
+    #[msg("Input amounts must be greater than zero.")]
+    InvalidInputAmount,
+
+    #[msg("Insufficient token balances in providers accounts.")]
+    InsufficientFunds,
+    
+    #[msg("MathOverflow.")]
+    MathOverflow,
+   
+    #[msg("More tokens needed to meet minimum liquidity threshold.")]
+    MinimumLiquidityThresholdNotMet,
+
+    #[msg("Argument decimals dont match with the mint.")]
+    MintDecimalsMismatch
 }

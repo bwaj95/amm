@@ -35,3 +35,6 @@ pub const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 #[constant]
 pub const BONK_MINT: &str = "DezXAZ8z7PnrFcZkpPR3rQHBeq5jXcX6assa5yk6PnAa";
+
+#[constant]
+pub const MINIMUM_LIQUIDITY: u64 = 1000;

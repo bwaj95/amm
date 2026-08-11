@@ -4,3 +4,5 @@ pub mod accounts;
 pub mod initialize_protocol;
 pub mod create_pool;
 pub mod initialize_mint;
+pub mod mint_tokens;
+pub mod  add_initial_liquidity;

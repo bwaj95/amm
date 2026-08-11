@@ -1,8 +1,10 @@
+pub mod anchor_utils;
 pub mod constants;
 pub mod error;
 pub mod events;
 pub mod instructions;
 pub mod state;
+pub mod utils;
 
 use anchor_lang::prelude::*;
 
@@ -29,5 +31,17 @@ pub mod amm {
 
     pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
         instructions::create_pool_handler(ctx)
+    }
+
+    pub fn mint_tokens(ctx: Context<MintTokens>, mint_id: u64, amount: u64) -> Result<()> {
+        instructions::mint_tokens_handler(ctx, amount)
+    }
+
+    pub fn add_initial_liquidity(
+        ctx: Context<AddInitialLiquidity>,
+        amount_token_a: u64,
+        amount_token_b: u64,
+    ) -> Result<()> {
+        instructions::add_initial_liquidity_handler(ctx, amount_token_a, amount_token_b)
     }
 }
