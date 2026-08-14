@@ -6,3 +6,6 @@ pub mod create_pool;
 pub mod initialize_mint;
 pub mod mint_tokens;
 pub mod  add_initial_liquidity;
+pub mod add_liquidity;
+pub mod fixtures;
+pub mod structs;

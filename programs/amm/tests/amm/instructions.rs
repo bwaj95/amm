@@ -211,3 +211,51 @@ pub fn add_initial_liquidity_ix(
 
     instruction
 }
+
+pub fn add_liquidity_ix(
+    ctx: &TestContext,
+    mint_a: &Pubkey,
+    mint_b: &Pubkey,
+    provider: &Pubkey,
+    max_amount_a: u64,
+    max_amount_b: u64,
+) -> Instruction {
+    let program_id = &ctx.program_id;
+    // derive pool, 2 vaults, lp mint, 2 user-atas, user lp mint
+    let (pool, _) = find_pool_pda(program_id, mint_a, mint_b);
+    let vault_a = get_associated_token_address(&pool, mint_a);
+    let vault_b = get_associated_token_address(&pool, mint_b);
+    let (lp_mint, _) = find_lp_mint_pda(program_id, &pool);
+    let provider_token_a = get_associated_token_address(provider, mint_a);
+    let provider_token_b = get_associated_token_address(provider, mint_b);
+    let provider_lp = get_associated_token_address(provider, &lp_mint);
+
+    let accounts = accounts::AddLiquidity {
+        provider: *provider,
+        pool,
+        mint_a: *mint_a,
+        mint_b: *mint_b,
+        vault_a,
+        vault_b,
+        lp_mint,
+        provider_token_a,
+        provider_token_b,
+        provider_lp_token: provider_lp,
+        system_program: system_program::ID,
+        token_program: token::ID,
+        associated_token_program: associated_token::ID,
+    }
+    .to_account_metas(None);
+
+    let instruction = Instruction {
+        program_id: *program_id,
+        accounts,
+        data: instruction::AddLiquidity {
+            max_amount_a,
+            max_amount_b,
+        }
+        .data(),
+    };
+
+    instruction
+}

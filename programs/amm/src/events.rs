@@ -36,3 +36,19 @@ pub struct InitialLiquidityAdded {
     pub provider_lp: u64,
     pub locked_lp: u64,
 }
+
+#[event]
+pub struct LiquidityAdded {
+    pub pool: Pubkey,
+    pub mint_a: Pubkey,
+    pub mint_b: Pubkey,
+
+    pub provider: Pubkey,
+    pub amount_a: u64,
+    pub amount_b: u64,
+    pub lp_minted: u64,
+
+    pub reserve_a_after: u64,
+    pub reserve_b_after: u64,
+    pub total_lp_after: u64,
+}

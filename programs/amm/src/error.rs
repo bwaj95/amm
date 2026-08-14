@@ -22,13 +22,22 @@ pub enum AmmError {
 
     #[msg("Insufficient token balances in providers accounts.")]
     InsufficientFunds,
-    
+
     #[msg("MathOverflow.")]
     MathOverflow,
-   
+
+    #[msg("DivisionError.")]
+    DivisionError,
+
     #[msg("More tokens needed to meet minimum liquidity threshold.")]
     MinimumLiquidityThresholdNotMet,
 
     #[msg("Argument decimals dont match with the mint.")]
-    MintDecimalsMismatch
+    MintDecimalsMismatch,
+
+    #[msg("Amounts are too small to produce a valid proportional deposit.")]
+    InsufficientTokensProvided,
+
+    #[msg("Pool reserves and LP supply must be greater than zero.")]
+    InvalidPoolState,
 }

@@ -44,4 +44,12 @@ pub mod amm {
     ) -> Result<()> {
         instructions::add_initial_liquidity_handler(ctx, amount_token_a, amount_token_b)
     }
+
+    pub fn add_liquidity(
+        ctx: Context<AddLiquidity>,
+        max_amount_a: u64,
+        max_amount_b: u64,
+    ) -> Result<()> {
+        instructions::add_liquidity_handler(ctx, max_amount_a, max_amount_b)
+    }
 }
