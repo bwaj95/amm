@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, Key, ToAccountInfo};
-use anchor_spl::token::{self, MintTo, TransferChecked};
+use anchor_spl::token::{self, Burn, MintTo, TransferChecked};
 
 use crate::{LP_MINT_SEED, POOL_SEED};
 
@@ -86,6 +86,29 @@ pub fn transfer_tokens_checked_with_signer<'info>(
 
     // call the transfer CPI
     token::transfer_checked(cpi_ctx, amount, decimals)?;
+
+    Ok(())
+}
+
+/// To use when a user wants to burn tokens from the ata
+pub fn burn_tokens<'info>(
+    from: &AccountInfo<'info>,
+    authority: &AccountInfo<'info>,
+    mint: &AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
+    amount: u64,
+) -> Result<()> {
+    let cpi_accounts = Burn {
+        from: from.to_account_info(),
+        mint: mint.to_account_info(),
+        authority: authority.to_account_info(),
+    };
+
+    let cpi_program = token_program.to_account_info().key();
+
+    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+
+    token::burn(cpi_ctx, amount)?;
 
     Ok(())
 }

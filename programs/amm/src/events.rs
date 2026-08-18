@@ -72,3 +72,21 @@ pub struct SwapExecuted {
     pub treasury_fee: u64,
     pub lp_fee: u64,
 }
+
+#[event]
+pub struct LiquidityRemoved {
+    pub pool: Pubkey,
+    pub provider: Pubkey,
+
+    pub mint_a: Pubkey,
+    pub mint_b: Pubkey,
+
+    pub lp_burned: u64,
+
+    pub amount_a: u64,
+    pub amount_b: u64,
+
+    pub reserve_a_after: u64,
+    pub reserve_b_after: u64,
+    pub total_lp_after: u64,
+}

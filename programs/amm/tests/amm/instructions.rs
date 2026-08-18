@@ -306,7 +306,8 @@ pub fn swap_ix(
         system_program: system_program::ID,
         token_program: token::ID,
         associated_token_program: associated_token::ID,
-    }.to_account_metas(None);
+    }
+    .to_account_metas(None);
 
     let instruction = Instruction {
         program_id,
@@ -320,4 +321,64 @@ pub fn swap_ix(
     };
 
     instruction
+}
+
+pub fn remove_liquidity_ix(
+    ctx: &TestContext,
+    provider: &Pubkey,
+    mint_a: &Pubkey,
+    mint_b: &Pubkey,
+    lp_amount: u64,
+    min_amount_a: u64,
+    min_amount_b: u64,
+) -> Instruction {
+    let program_id = &ctx.program_id;
+
+    let (pool, _) = find_pool_pda(program_id, mint_a, mint_b);
+
+    let (lp_mint, _) = find_lp_mint_pda(program_id, &pool);
+
+    let vault_a = anchor_spl::associated_token::get_associated_token_address(&pool, mint_a);
+
+    let vault_b = anchor_spl::associated_token::get_associated_token_address(&pool, mint_b);
+
+    let provider_token_a =
+        anchor_spl::associated_token::get_associated_token_address(provider, mint_a);
+
+    let provider_token_b =
+        anchor_spl::associated_token::get_associated_token_address(provider, mint_b);
+
+    let provider_lp_token =
+        anchor_spl::associated_token::get_associated_token_address(provider, &lp_mint);
+
+    let accounts = accounts::RemoveLiquidity {
+        provider: *provider,
+
+        mint_a: *mint_a,
+        mint_b: *mint_b,
+
+        pool,
+        lp_mint,
+
+        vault_a,
+        vault_b,
+
+        provider_token_a,
+        provider_token_b,
+        provider_lp_token,
+
+        token_program: token::ID,
+    }
+    .to_account_metas(None);
+
+    Instruction {
+        program_id: *program_id,
+        accounts,
+        data: instruction::RemoveLiquidity {
+            lp_amount,
+            min_amount_a,
+            min_amount_b,
+        }
+        .data(),
+    }
 }

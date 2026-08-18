@@ -5,19 +5,10 @@ use solana_pubkey::Pubkey;
 
 use crate::{
     amm::{
-        accounts::{mint, pool, protocol_treasury, token_account},
-        add_initial_liquidity::add_initial_liquidity,
-        add_liquidity::add_liquidity,
-        create_pool::create_pool,
-        initialize_mint::initialize_mint,
-        initialize_protocol::initialize_protocol,
-        mint_tokens::mint_tokens,
-        pdas::{
+        accounts::{mint, pool, protocol_treasury, token_account}, add_initial_liquidity::add_initial_liquidity, add_liquidity::add_liquidity, create_pool::create_pool, initialize_mint::initialize_mint, initialize_protocol::initialize_protocol, mint_tokens::mint_tokens, pdas::{
             find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
             find_protocol_treasury_pda,
-        },
-        structs::{InitializedPoolStruct, PoolReservesSnapshot, UserPoolAccounts},
-        swap::{self, swap},
+        }, remove_liquidity::remove_liquidity, structs::{InitializedPoolStruct, PoolReservesSnapshot, UserPoolAccounts}, swap::{self, swap}
     },
     common::context::TestContext,
 };
@@ -209,4 +200,27 @@ pub fn fund_tokens_to_user(
     mint_tokens(ctx, user, &ata, mint_id, amount).expect("failed to fund user");
 
     ata
+}
+
+pub fn remove_liquidity_as_user(
+    ctx: &mut TestContext,
+    pool_struct: &InitializedPoolStruct,
+    provider: &Pubkey,
+    lp_amount: u64,
+    min_amount_a: u64,
+    min_amount_b: u64,
+) -> Result<PoolReservesSnapshot, FailedTransactionMetadata> {
+    remove_liquidity(
+        ctx,
+        provider,
+        &pool_struct.mint_a,
+        &pool_struct.mint_b,
+        lp_amount,
+        min_amount_a,
+        min_amount_b,
+    )?;
+
+    let pool_reserves = pool_reserves_snapshot(ctx, &pool_struct.pool);
+
+    Ok(pool_reserves)
 }

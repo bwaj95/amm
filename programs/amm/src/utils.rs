@@ -1,4 +1,6 @@
-use crate::{error::AmmError, MAX_BPS};
+use anchor_lang::require;
+
+use crate::{error::AmmError, MAX_BPS, MINIMUM_LIQUIDITY};
 
 pub fn calculate_lp_initial(amount_token_a: u64, amount_token_b: u64) -> Result<u64, AmmError> {
     let product = (amount_token_a as u128)
@@ -144,9 +146,53 @@ pub fn calculate_swap(
     })
 }
 
+pub fn calculate_remove_liquidity(
+    reserve_a: u64,
+    reserve_b: u64,
+    total_lp_supply: u64,
+    lp_amount: u64,
+) -> Result<LpRemoveCalculation, AmmError> {
+    if reserve_a == 0 || reserve_b == 0 || total_lp_supply == 0 {
+        return Err(AmmError::InvalidPoolState);
+    }
+
+    if lp_amount == 0 {
+        return Err(AmmError::InvalidInputAmount);
+    }
+
+    let amount_a_u128: u128 = (lp_amount as u128)
+        .checked_mul(reserve_a as u128)
+        .ok_or(AmmError::MathOverflow)?
+        .checked_div(total_lp_supply as u128)
+        .ok_or(AmmError::DivisionError)?;
+    let amount_a: u64 = u64::try_from(amount_a_u128).map_err(|_| AmmError::MathOverflow)?;
+
+    if amount_a == 0 {
+        return Err(AmmError::InsufficientLiquidityOutput);
+    }
+
+    let amount_b_u128: u128 = (lp_amount as u128)
+        .checked_mul(reserve_b as u128)
+        .ok_or(AmmError::MathOverflow)?
+        .checked_div(total_lp_supply as u128)
+        .ok_or(AmmError::DivisionError)?;
+    let amount_b: u64 = u64::try_from(amount_b_u128).map_err(|_| AmmError::MathOverflow)?;
+
+    if amount_b == 0 {
+        return Err(AmmError::InsufficientLiquidityOutput);
+    }
+
+    Ok(LpRemoveCalculation { amount_a, amount_b })
+}
+
 pub struct SwapCalculation {
     pub amount_out: u64,
     pub total_swap_fees: u64,
     pub treasury_fees: u64,
     pub lp_fees: u64,
+}
+
+pub struct LpRemoveCalculation {
+    pub amount_a: u64,
+    pub amount_b: u64,
 }

@@ -10,3 +10,4 @@ pub mod add_liquidity;
 pub mod fixtures;
 pub mod structs;
 pub mod  swap;
+pub mod remove_liquidity;

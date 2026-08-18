@@ -52,4 +52,10 @@ pub enum AmmError {
    
     #[msg("Insufficient liquidity in the pool.")]
     InsufficientLiquidity,
+    
+    #[msg("Insufficient liquidity in the pool.")]
+    InvalidLiquidityPoolState,
+    
+    #[msg("Liquidity amount too small to redeem.")]
+    InsufficientLiquidityOutput,
 }
