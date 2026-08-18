@@ -61,6 +61,10 @@ pub fn create_pool_ix(
     let vault_a = get_associated_token_address(&pool, mint_a);
     let vault_b = get_associated_token_address(&pool, mint_b);
 
+    let (protocol_treasury, _) = find_protocol_treasury_pda(program_id);
+    let treasury_a = get_associated_token_address(&protocol_treasury, mint_a);
+    let treasury_b = get_associated_token_address(&protocol_treasury, mint_b);
+
     let accounts = accounts::CreatePool {
         creator: *creator,
         pool,
@@ -69,6 +73,9 @@ pub fn create_pool_ix(
         mint_b: *mint_b,
         vault_a,
         vault_b,
+        treasury_a,
+        treasury_b,
+        protocol_treasury,
         lp_mint,
         locked_lp_token,
         system_program: system_program::ID,
@@ -253,6 +260,61 @@ pub fn add_liquidity_ix(
         data: instruction::AddLiquidity {
             max_amount_a,
             max_amount_b,
+        }
+        .data(),
+    };
+
+    instruction
+}
+
+pub fn swap_ix(
+    ctx: &TestContext,
+    provider: &Pubkey,
+    mint_a: &Pubkey,
+    mint_b: &Pubkey,
+    amount_in: u64,
+    min_amount_out: u64,
+    a_to_b: bool,
+) -> Instruction {
+    let program_id = ctx.program_id;
+
+    let (pool, _) = find_pool_pda(&program_id, mint_a, mint_b);
+    let vault_a = get_associated_token_address(&pool, mint_a);
+    let vault_b = get_associated_token_address(&pool, mint_b);
+
+    let provider_token_a = get_associated_token_address(provider, mint_a);
+    let provider_token_b = get_associated_token_address(provider, mint_b);
+
+    let (protocol_config, _) = find_protocol_config_pda(&program_id);
+    let (protocol_treasury, _) = find_protocol_treasury_pda(&program_id);
+    let treasury_a = get_associated_token_address(&protocol_treasury, mint_a);
+    let treasury_b = get_associated_token_address(&protocol_treasury, mint_b);
+
+    let accounts = accounts::Swap {
+        pool,
+        provider: *provider,
+        mint_a: *mint_a,
+        mint_b: *mint_b,
+        vault_a,
+        vault_b,
+        provider_token_a,
+        provider_token_b,
+        protocol_config,
+        protocol_treasury,
+        treasury_a,
+        treasury_b,
+        system_program: system_program::ID,
+        token_program: token::ID,
+        associated_token_program: associated_token::ID,
+    }.to_account_metas(None);
+
+    let instruction = Instruction {
+        program_id,
+        accounts,
+        data: instruction::Swap {
+            amount_in,
+            min_amount_out,
+            a_to_b,
         }
         .data(),
     };

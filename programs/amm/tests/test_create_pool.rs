@@ -1,4 +1,4 @@
-use ::amm::{self as amm_protocol, error::AmmError, LP_MINT_DECIMALS};
+use ::amm::{self as amm_protocol, LP_MINT_DECIMALS};
 use anchor_spl::associated_token::get_associated_token_address;
 use solana_pubkey::Pubkey;
 
@@ -8,7 +8,10 @@ use crate::{
         create_pool::create_pool,
         initialize_mint,
         initialize_protocol::initialize_protocol,
-        pdas::{find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda},
+        pdas::{
+            find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
+            find_protocol_treasury_pda,
+        },
     },
     common::context::TestContext,
 };
@@ -62,6 +65,12 @@ fn create_pool_success() {
     let vault_b_ata = get_associated_token_address(&pool_pda, &mint_b);
     let vault_b_account = ata(&ctx, &vault_b_ata);
 
+    let (protocol_treasury, _) = find_protocol_treasury_pda(&program_id);
+    let treasury_a = get_associated_token_address(&protocol_treasury, &mint_a);
+    let treasury_b = get_associated_token_address(&protocol_treasury, &mint_b);
+    let treasury_a_account = token_account(&ctx, &treasury_a);
+    let treasury_b_account = token_account(&ctx, &treasury_b);
+
     assert_eq!(pool_account.mint_a, mint_a);
     assert_eq!(pool_account.mint_b, mint_b);
     assert_eq!(pool_account.vault_a, vault_a_ata);
@@ -69,6 +78,8 @@ fn create_pool_success() {
     assert_eq!(pool_account.lp_mint, lp_mint_pda);
     assert_eq!(pool_account.locked_lp_token, locked_lp_token_pda);
     assert_eq!(pool_account.bump, pool_pda_bump);
+    assert_eq!(pool_account.treasury_a, treasury_a);
+    assert_eq!(pool_account.treasury_b, treasury_b);
 
     assert_eq!(lp_mint_account.mint_authority, Some(pool_pda).into());
     assert_eq!(lp_mint_account.decimals, LP_MINT_DECIMALS);
@@ -80,6 +91,13 @@ fn create_pool_success() {
 
     assert_eq!(vault_a_account.owner, pool_pda);
     assert_eq!(vault_b_account.owner, pool_pda);
+
+    assert_eq!(treasury_a_account.mint, mint_a);
+    assert_eq!(treasury_a_account.owner, protocol_treasury);
+    assert_eq!(treasury_a_account.amount, 0);
+    assert_eq!(treasury_b_account.mint, mint_b);
+    assert_eq!(treasury_b_account.owner, protocol_treasury);
+    assert_eq!(treasury_b_account.amount, 0);
 }
 
 #[test]

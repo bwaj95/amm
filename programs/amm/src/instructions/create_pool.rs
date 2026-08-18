@@ -6,7 +6,8 @@ use anchor_spl::{
 
 use crate::{
     constants::{POOL_SEED, PROTOCOL_CONFIG_SEED},
-    LOCKED_LP_SEED, LP_MINT_DECIMALS,
+    state::ProtocolTreasury,
+    LOCKED_LP_SEED, LP_MINT_DECIMALS, TREASURY_SEED,
 };
 use crate::{error::AmmError, LP_MINT_SEED};
 use crate::{
@@ -25,10 +26,10 @@ pub struct CreatePool<'info> {
         seeds=[PROTOCOL_CONFIG_SEED],
         bump
     )]
-    pub protocol_config: Account<'info, ProtocolConfig>,
+    pub protocol_config: Box<Account<'info, ProtocolConfig>>,
 
-    pub mint_a: Account<'info, Mint>,
-    pub mint_b: Account<'info, Mint>,
+    pub mint_a: Box<Account<'info, Mint>>,
+    pub mint_b: Box<Account<'info, Mint>>,
 
     #[account(
         init,
@@ -39,7 +40,7 @@ pub struct CreatePool<'info> {
         seeds=[POOL_SEED, mint_a.key().as_ref(), mint_b.key().as_ref()],
         bump
     )]
-    pub pool: Account<'info, Pool>,
+    pub pool: Box<Account<'info, Pool>>,
 
     #[account(
         init,
@@ -47,7 +48,7 @@ pub struct CreatePool<'info> {
         associated_token::mint = mint_a,
         associated_token::authority = pool
     )]
-    pub vault_a: Account<'info, TokenAccount>,
+    pub vault_a: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init,
@@ -55,7 +56,29 @@ pub struct CreatePool<'info> {
         associated_token::mint = mint_b,
         associated_token::authority = pool
     )]
-    pub vault_b: Account<'info, TokenAccount>,
+    pub vault_b: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [TREASURY_SEED],
+        bump
+    )]
+    pub protocol_treasury: Box<Account<'info, ProtocolTreasury>>,
+
+    #[account(
+    init,
+    payer = creator,
+    associated_token::mint = mint_a,
+    associated_token::authority = protocol_treasury,
+)]
+    pub treasury_a: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+    init,
+    payer = creator,
+    associated_token::mint = mint_b,
+    associated_token::authority = protocol_treasury,
+)]
+    pub treasury_b: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init,
@@ -65,7 +88,7 @@ pub struct CreatePool<'info> {
         seeds = [LP_MINT_SEED, pool.key().as_ref()], // lp_mint for this specific pool, derived using the pool pubkey.
         bump
     )]
-    pub lp_mint: Account<'info, Mint>,
+    pub lp_mint: Box<Account<'info, Mint>>,
 
     #[account(
     init,
@@ -74,7 +97,7 @@ pub struct CreatePool<'info> {
     token::authority = pool,
     seeds = [LOCKED_LP_SEED, pool.key().as_ref()],
     bump)]
-    pub locked_lp_token: Account<'info, TokenAccount>,
+    pub locked_lp_token: Box<Account<'info, TokenAccount>>,
 
     pub system_program: Program<'info, System>,
 
@@ -90,6 +113,8 @@ pub fn create_pool_handler(ctx: Context<CreatePool>) -> Result<()> {
     pool.mint_b = ctx.accounts.mint_b.key();
     pool.vault_a = ctx.accounts.vault_a.key();
     pool.vault_b = ctx.accounts.vault_b.key();
+    pool.treasury_a = ctx.accounts.treasury_a.key();
+    pool.treasury_b = ctx.accounts.treasury_b.key();
     pool.lp_mint = ctx.accounts.lp_mint.key();
     pool.locked_lp_token = ctx.accounts.locked_lp_token.key();
     pool.bump = ctx.bumps.pool;
@@ -100,6 +125,8 @@ pub fn create_pool_handler(ctx: Context<CreatePool>) -> Result<()> {
         mint_b: ctx.accounts.mint_b.key(),
         vault_a: ctx.accounts.vault_a.key(),
         vault_b: ctx.accounts.vault_b.key(),
+        treasury_a: ctx.accounts.treasury_a.key(),
+        treasury_b: ctx.accounts.treasury_b.key(),
         lp_mint: ctx.accounts.lp_mint.key(),
         locked_lp_token: ctx.accounts.locked_lp_token.key(),
     });

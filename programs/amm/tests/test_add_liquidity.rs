@@ -1,25 +1,15 @@
 use ::amm::{
-    self as amm_protocol,
-    state::protocol_config,
-    utils::{calculate_add_liquidity, calculate_lp_initial},
-    MINIMUM_LIQUIDITY,
+    self as amm_protocol, state::protocol_config, utils::calculate_add_liquidity, MINIMUM_LIQUIDITY,
 };
-use anchor_spl::associated_token::{
-    get_associated_token_address,
-    spl_associated_token_account::address::get_associated_token_address_and_bump_seed,
-};
+use anchor_spl::associated_token::get_associated_token_address;
 
 use crate::{
     amm::{
         accounts::{ata, mint, pool, token_account},
-        add_initial_liquidity::add_initial_liquidity,
-        create_pool::create_pool,
         fixtures::{
             add_liquidity_as_user, derive_user_pool_accounts, fund_tokens_to_user,
             pool_reserves_snapshot, setup_initialized_pool,
         },
-        initialize_mint::{self, initialize_mint},
-        initialize_protocol::initialize_protocol,
         mint_tokens::mint_tokens,
         pdas::{
             find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
@@ -38,7 +28,7 @@ pub fn test_add_balanced_liquidity_success() {
     let program_id = amm_protocol::ID;
     let mut ctx = TestContext::new(program_id);
 
-    let pool_struct: InitializedPoolStruct = setup_initialized_pool(
+    let (pool_struct, mints_swapped) = setup_initialized_pool(
         &mut ctx,
         500_000_000_000_u64,
         10_000_000_000_u64,
@@ -55,8 +45,12 @@ pub fn test_add_balanced_liquidity_success() {
         fund_tokens_to_user(&mut ctx, &bob, pool_struct.mint_b_id, 50_000_000_000_u64);
     let bob_lp = get_associated_token_address(&bob, &pool_struct.lp_mint);
     // call add liq using bob
-    let bob_max_amount_a: u64 = 10_000_000_000_u64;
-    let bob_max_amount_b: u64 = 40_000_000_000_u64;
+    let mut bob_max_amount_a: u64 = 10_000_000_000_u64;
+    let mut bob_max_amount_b: u64 = 40_000_000_000_u64;
+
+    if mints_swapped {
+        std::mem::swap(&mut bob_max_amount_a, &mut bob_max_amount_b);
+    }
 
     let bob_token_a_before = token_account(&ctx, &bob_token_a).amount;
     let bob_token_b_before = token_account(&ctx, &bob_token_b).amount;
@@ -107,5 +101,57 @@ pub fn test_add_balanced_liquidity_success() {
     );
 }
 
-// #[test]
-// pub fn test_add_unbalanced_liquidity_success() {}
+#[test]
+pub fn test_add_unbalanced_liquidity_excess_b() {
+    // case - limit token A, excess token B
+    let program_id = amm_protocol::ID;
+
+    let mut ctx = TestContext::new(program_id);
+
+    let (pool_struct, mints_swapped) = setup_initialized_pool(
+        &mut ctx,
+        500_000_000_000_u64,
+        10_000_000_000_u64,
+        40_000_000_000_u64,
+    )
+    .unwrap();
+
+    let bob = ctx.bob.pubkey();
+    let bob_token_a =
+        fund_tokens_to_user(&mut ctx, &bob, pool_struct.mint_a_id, 100_000_000_000_u64);
+    let bob_token_b =
+        fund_tokens_to_user(&mut ctx, &bob, pool_struct.mint_b_id, 100_000_000_000_u64);
+
+    let mut bob_max_amount_a: u64 = 10_000_000_000_u64;
+    let mut bob_max_amount_b: u64 = 60_000_000_000_u64;
+
+    if mints_swapped {
+        std::mem::swap(&mut bob_max_amount_a, &mut bob_max_amount_b);
+    }
+
+    let pool_before = pool_reserves_snapshot(&ctx, &pool_struct.pool);
+
+    let (actual_a, actual_b, lp_to_mint) = calculate_add_liquidity(
+        pool_before.reserve_a,
+        pool_before.reserve_b,
+        bob_max_amount_a,
+        bob_max_amount_b,
+        pool_before.lp_supply,
+    )
+    .unwrap();
+
+    let pool_after = add_liquidity_as_user(
+        &mut ctx,
+        &pool_struct,
+        &bob,
+        bob_max_amount_a,
+        bob_max_amount_b,
+    )
+    .unwrap();
+
+    assert_eq!(pool_after.reserve_a, pool_before.reserve_a + actual_a);
+    assert_eq!(pool_after.reserve_b, pool_before.reserve_b + actual_b);
+    assert_eq!(pool_after.lp_supply, pool_before.lp_supply + lp_to_mint);
+}
+
+// corrections TODO!

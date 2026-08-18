@@ -15,6 +15,9 @@ pub struct InitializedPoolStruct {
 
     pub lp_mint: Pubkey,
     pub locked_lp_token: Pubkey,
+
+    pub treasury_a: Pubkey,
+    pub treasury_b: Pubkey,
 }
 
 pub struct UserPoolAccounts {
@@ -27,5 +30,7 @@ pub struct PoolReservesSnapshot {
     pub pool: Pubkey,
     pub reserve_a: u64,
     pub reserve_b: u64,
-    pub lp_supply: u64
+    pub lp_supply: u64,
+    pub treasury_a_amount: u64,
+    pub treasury_b_amount: u64
 }

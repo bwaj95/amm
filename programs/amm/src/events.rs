@@ -15,6 +15,8 @@ pub struct PoolCreated {
     pub mint_b: Pubkey,
     pub vault_a: Pubkey,
     pub vault_b: Pubkey,
+    pub treasury_a: Pubkey,
+    pub treasury_b: Pubkey,
     pub lp_mint: Pubkey,
     pub locked_lp_token: Pubkey,
 }
@@ -51,4 +53,22 @@ pub struct LiquidityAdded {
     pub reserve_a_after: u64,
     pub reserve_b_after: u64,
     pub total_lp_after: u64,
+}
+
+#[event]
+pub struct SwapExecuted {
+    pub pool: Pubkey,
+    pub mint_in: Pubkey,
+    pub mint_out: Pubkey,
+
+    pub provider: Pubkey,
+    pub amount_in: u64,
+    pub amount_out: u64,
+
+    pub provider_token_in: Pubkey,
+    pub provider_token_out: Pubkey,
+
+    pub total_fee: u64,
+    pub treasury_fee: u64,
+    pub lp_fee: u64,
 }

@@ -5,15 +5,19 @@ use solana_pubkey::Pubkey;
 
 use crate::{
     amm::{
-        accounts::{mint, pool, token_account},
+        accounts::{mint, pool, protocol_treasury, token_account},
         add_initial_liquidity::add_initial_liquidity,
         add_liquidity::add_liquidity,
         create_pool::create_pool,
         initialize_mint::initialize_mint,
         initialize_protocol::initialize_protocol,
         mint_tokens::mint_tokens,
-        pdas::{find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda},
+        pdas::{
+            find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
+            find_protocol_treasury_pda,
+        },
         structs::{InitializedPoolStruct, PoolReservesSnapshot, UserPoolAccounts},
+        swap::{self, swap},
     },
     common::context::TestContext,
 };
@@ -23,8 +27,10 @@ pub fn setup_initialized_pool(
     alice_mint_amount: u64,
     initial_amount_a: u64,
     initial_amount_b: u64,
-) -> Result<InitializedPoolStruct, FailedTransactionMetadata> {
+) -> Result<(InitializedPoolStruct, bool), FailedTransactionMetadata> {
     let program_id = ctx.program_id;
+    let mut amount_a = initial_amount_a;
+    let mut amount_b = initial_amount_b;
 
     // 1. Initilize Protocol
     initialize_protocol(ctx)?;
@@ -39,10 +45,14 @@ pub fn setup_initialized_pool(
     let (mut mint_a, _) = find_mint_pda(&program_id, mint_a_id);
     let (mut mint_b, _) = find_mint_pda(&program_id, mint_b_id);
 
+    let mut mints_swapped = false;
     // 3. Canonical Ordering
     if mint_a > mint_b {
+        println!("mint Canonical swapping....");
         std::mem::swap(&mut mint_a, &mut mint_b);
         std::mem::swap(&mut mint_a_id, &mut mint_b_id);
+        std::mem::swap(&mut amount_a, &mut amount_b);
+        mints_swapped = true;
     }
 
     // 4. Create Pool
@@ -70,10 +80,14 @@ pub fn setup_initialized_pool(
 
     let (locked_lp_token, _) = find_locked_lp_token_pda(&program_id, &pool);
 
-    // 7. Add Initial Liquidity
-    add_initial_liquidity(ctx, &mint_a, &mint_b, initial_amount_a, initial_amount_b)?;
+    let (protocol_treasury, _) = find_protocol_treasury_pda(&ctx.program_id);
+    let treasury_a = get_associated_token_address(&protocol_treasury, &mint_a);
+    let treasury_b = get_associated_token_address(&protocol_treasury, &mint_b);
 
-    Ok(InitializedPoolStruct {
+    // 7. Add Initial Liquidity
+    add_initial_liquidity(ctx, &mint_a, &mint_b, amount_a, amount_b)?;
+
+    let pool_struct = InitializedPoolStruct {
         pool,
         mint_a,
         mint_b,
@@ -84,7 +98,12 @@ pub fn setup_initialized_pool(
         vault_b,
         lp_mint,
         locked_lp_token,
-    })
+
+        treasury_a,
+        treasury_b,
+    };
+
+    Ok((pool_struct, mints_swapped))
 }
 
 pub fn add_liquidity_as_user(
@@ -101,6 +120,29 @@ pub fn add_liquidity_as_user(
         &pool_struct.mint_b,
         max_a,
         max_b,
+    )?;
+
+    let pool_snapshot = pool_reserves_snapshot(ctx, &pool_struct.pool);
+
+    Ok(pool_snapshot)
+}
+
+pub fn swap_as_user(
+    ctx: &mut TestContext,
+    pool_struct: &InitializedPoolStruct,
+    user: &Pubkey,
+    amount_in: u64,
+    min_amount_out: u64,
+    a_to_b: bool,
+) -> Result<PoolReservesSnapshot, FailedTransactionMetadata> {
+    swap(
+        ctx,
+        user,
+        &pool_struct.mint_a,
+        &pool_struct.mint_b,
+        amount_in,
+        min_amount_out,
+        a_to_b,
     )?;
 
     let pool_snapshot = pool_reserves_snapshot(ctx, &pool_struct.pool);
@@ -134,11 +176,23 @@ pub fn pool_reserves_snapshot(ctx: &TestContext, pool_address: &Pubkey) -> PoolR
     let vault_b = token_account(ctx, &pool.vault_b);
     let lp_mint = mint(ctx, &pool.lp_mint);
 
+    let (protocol_treasury, _) = find_protocol_treasury_pda(&ctx.program_id);
+    let treasury_a = token_account(
+        ctx,
+        &get_associated_token_address(&protocol_treasury, &pool.mint_a),
+    );
+    let treasury_b = token_account(
+        ctx,
+        &get_associated_token_address(&protocol_treasury, &pool.mint_b),
+    );
+
     PoolReservesSnapshot {
         pool: *pool_address,
         reserve_a: vault_a.amount,
         reserve_b: vault_b.amount,
         lp_supply: lp_mint.supply,
+        treasury_a_amount: treasury_a.amount,
+        treasury_b_amount: treasury_b.amount,
     }
 }
 

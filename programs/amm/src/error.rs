@@ -40,4 +40,16 @@ pub enum AmmError {
 
     #[msg("Pool reserves and LP supply must be greater than zero.")]
     InvalidPoolState,
+
+    #[msg("Invalid values for swap fee and treasury fee.")]
+    InvalidFeeConfig,
+   
+    #[msg("Amount Insufficient to make a swap.")]
+    InsufficientSwapAmount,
+   
+    #[msg("Amaount not sufficient for given slippage.")]
+    SlippageExceeded,
+   
+    #[msg("Insufficient liquidity in the pool.")]
+    InsufficientLiquidity,
 }

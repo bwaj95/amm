@@ -1,4 +1,4 @@
-use crate::error::AmmError;
+use crate::{error::AmmError, MAX_BPS};
 
 pub fn calculate_lp_initial(amount_token_a: u64, amount_token_b: u64) -> Result<u64, AmmError> {
     let product = (amount_token_a as u128)
@@ -70,4 +70,83 @@ pub fn calculate_add_liquidity(
     }
 
     Ok((actual_a, actual_b, lp_to_mint))
+}
+
+pub fn calculate_swap(
+    reserve_in: u64,
+    reserve_out: u64,
+    amount_in: u64,
+    swap_fee_bps: u16,
+    treasury_fee_bps: u16,
+) -> Result<SwapCalculation, AmmError> {
+    if reserve_in == 0 || reserve_out == 0 {
+        return Err(AmmError::InvalidPoolState);
+    }
+
+    if amount_in == 0 {
+        return Err(AmmError::InvalidInputAmount);
+    }
+
+    if swap_fee_bps > MAX_BPS || treasury_fee_bps > swap_fee_bps {
+        return Err(AmmError::InvalidFeeConfig);
+    }
+
+    // amount_in * (swap_fee_bps / MAX_BPS)
+    let total_swap_fees_u128: u128 = (amount_in as u128)
+        .checked_mul(swap_fee_bps as u128)
+        .ok_or(AmmError::MathOverflow)?
+        .checked_div(MAX_BPS as u128)
+        .ok_or(AmmError::DivisionError)?;
+    let total_swap_fees =
+        u64::try_from(total_swap_fees_u128).map_err(|_| AmmError::MathOverflow)?;
+
+    let treasury_fees_u128: u128 = (amount_in as u128)
+        .checked_mul(treasury_fee_bps as u128)
+        .ok_or(AmmError::MathOverflow)?
+        .checked_div(MAX_BPS as u128)
+        .ok_or(AmmError::DivisionError)?;
+    let treasury_fees = u64::try_from(treasury_fees_u128).map_err(|_| AmmError::MathOverflow)?;
+
+    let lp_fees = total_swap_fees
+        .checked_sub(treasury_fees)
+        .ok_or(AmmError::MathOverflow)?;
+
+    let amount_after_fees = amount_in
+        .checked_sub(total_swap_fees)
+        .ok_or(AmmError::MathOverflow)?;
+
+    if amount_after_fees == 0 {
+        return Err(AmmError::InsufficientSwapAmount);
+    }
+
+    // (reserve_out * amount_after_fees) / (reserve_in + amount_after_fees)
+    let amount_out_u128: u128 = (reserve_out as u128)
+        .checked_mul(amount_after_fees as u128)
+        .ok_or(AmmError::MathOverflow)?
+        .checked_div(
+            (reserve_in as u128)
+                .checked_add(amount_after_fees as u128)
+                .ok_or(AmmError::MathOverflow)?,
+        )
+        .ok_or(AmmError::DivisionError)?;
+
+    let amount_out: u64 = u64::try_from(amount_out_u128).map_err(|_| AmmError::MathOverflow)?;
+
+    if amount_out == 0 {
+        return Err(AmmError::InsufficientSwapAmount);
+    }
+
+    Ok(SwapCalculation {
+        amount_out,
+        total_swap_fees,
+        treasury_fees,
+        lp_fees,
+    })
+}
+
+pub struct SwapCalculation {
+    pub amount_out: u64,
+    pub total_swap_fees: u64,
+    pub treasury_fees: u64,
+    pub lp_fees: u64,
 }
