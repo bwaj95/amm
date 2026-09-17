@@ -19,7 +19,11 @@ pub const LP_MINT_SEED: &[u8] = b"lp_mint";
 pub const LOCKED_LP_SEED: &[u8] = b"locked_lp";
 
 #[constant]
-pub const MAX_BPS: u16 = 10_000;
+pub const BPS_DENOMINATOR: u16 = 10_000;
+
+/// Governance cannot configure a swap fee above 10%.
+#[constant]
+pub const MAX_SWAP_FEE_BPS: u16 = 1_000;
 
 #[constant]
 pub const ONE_SOL: u64 = 1_000_000_000u64;

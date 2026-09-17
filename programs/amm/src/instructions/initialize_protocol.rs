@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::*;
+use crate::constants::{PROTOCOL_CONFIG_SEED, TREASURY_SEED};
 
-use crate::error::AmmError;
+use crate::events::ProtocolInitialized;
 use crate::state::{ProtocolConfig, ProtocolTreasury};
-use crate::events::{ProtocolInitialized};
+use crate::utils::validate_fee_config;
 
 #[derive(Accounts)]
 pub struct InitializeProtocol<'info> {
@@ -41,12 +41,7 @@ pub fn handler(
     swap_fee_bps: u16,
     treasury_fee_bps: u16,
 ) -> Result<()> {
-    require!(swap_fee_bps <= MAX_BPS, AmmError::InvalidSwapFee);
-
-    require!(
-        treasury_fee_bps <= swap_fee_bps,
-        AmmError::InvalidTreasuryFee
-    );
+    validate_fee_config(swap_fee_bps, treasury_fee_bps)?;
 
     let protocol_config = &mut ctx.accounts.protocol_config;
 

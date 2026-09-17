@@ -15,6 +15,28 @@ pub fn remove_liquidity(
     min_amount_a: u64,
     min_amount_b: u64,
 ) -> std::result::Result<TransactionMetadata, FailedTransactionMetadata> {
+    remove_liquidity_with_deadline(
+        ctx,
+        provider,
+        mint_a,
+        mint_b,
+        lp_amount,
+        min_amount_a,
+        min_amount_b,
+        i64::MAX,
+    )
+}
+
+pub fn remove_liquidity_with_deadline(
+    ctx: &mut TestContext,
+    provider: &Pubkey,
+    mint_a: &Pubkey,
+    mint_b: &Pubkey,
+    lp_amount: u64,
+    min_amount_a: u64,
+    min_amount_b: u64,
+    deadline: i64,
+) -> std::result::Result<TransactionMetadata, FailedTransactionMetadata> {
     let signer = if *provider == ctx.alice.pubkey() {
         ctx.alice.signer()
     } else if *provider == ctx.bob.pubkey() {
@@ -33,6 +55,7 @@ pub fn remove_liquidity(
         lp_amount,
         min_amount_a,
         min_amount_b,
+        deadline,
     );
 
     execute_transaction(&mut ctx.svm, provider, &[signer], &[ix])

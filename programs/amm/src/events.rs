@@ -71,6 +71,9 @@ pub struct SwapExecuted {
     pub total_fee: u64,
     pub treasury_fee: u64,
     pub lp_fee: u64,
+
+    pub reserve_in_after: u64,
+    pub reserve_out_after: u64,
 }
 
 #[event]
@@ -89,4 +92,37 @@ pub struct LiquidityRemoved {
     pub reserve_a_after: u64,
     pub reserve_b_after: u64,
     pub total_lp_after: u64,
+}
+
+#[event]
+pub struct ProtocolPauseChanged {
+    pub admin: Pubkey,
+    pub paused: bool,
+}
+
+#[event]
+pub struct ProtocolFeesUpdated {
+    pub admin: Pubkey,
+    pub previous_swap_fee_bps: u16,
+    pub previous_treasury_fee_bps: u16,
+    pub new_swap_fee_bps: u16,
+    pub new_treasury_fee_bps: u16,
+}
+
+#[event]
+pub struct AdminTransferProposed {
+    pub current_admin: Pubkey,
+    pub pending_admin: Pubkey,
+}
+
+#[event]
+pub struct AdminTransferCancelled {
+    pub admin: Pubkey,
+    pub cancelled_pending_admin: Pubkey,
+}
+
+#[event]
+pub struct AdminTransferred {
+    pub previous_admin: Pubkey,
+    pub new_admin: Pubkey,
 }

@@ -41,16 +41,32 @@ pub mod amm {
         ctx: Context<AddInitialLiquidity>,
         amount_token_a: u64,
         amount_token_b: u64,
+        min_lp_out: u64,
+        deadline: i64,
     ) -> Result<()> {
-        instructions::add_initial_liquidity_handler(ctx, amount_token_a, amount_token_b)
+        instructions::add_initial_liquidity_handler(
+            ctx,
+            amount_token_a,
+            amount_token_b,
+            min_lp_out,
+            deadline,
+        )
     }
 
     pub fn add_liquidity(
         ctx: Context<AddLiquidity>,
         max_amount_a: u64,
         max_amount_b: u64,
+        min_lp_out: u64,
+        deadline: i64,
     ) -> Result<()> {
-        instructions::add_liquidity_handler(ctx, max_amount_a, max_amount_b)
+        instructions::add_liquidity_handler(
+            ctx,
+            max_amount_a,
+            max_amount_b,
+            min_lp_out,
+            deadline,
+        )
     }
 
     pub fn swap(
@@ -58,8 +74,9 @@ pub mod amm {
         amount_in: u64,
         min_amount_out: u64,
         a_to_b: bool,
+        deadline: i64,
     ) -> Result<()> {
-        swap_handler(ctx, amount_in, min_amount_out, a_to_b)
+        swap_handler(ctx, amount_in, min_amount_out, a_to_b, deadline)
     }
 
     pub fn remove_liquidity(
@@ -67,7 +84,32 @@ pub mod amm {
         lp_amount: u64,
         min_amount_a: u64,
         min_amount_b: u64,
+        deadline: i64,
     ) -> Result<()> {
-        remove_liquidity_handler(ctx, lp_amount, min_amount_a, min_amount_b)
+        remove_liquidity_handler(ctx, lp_amount, min_amount_a, min_amount_b, deadline)
+    }
+
+    pub fn set_paused(ctx: Context<AdminOnly>, paused: bool) -> Result<()> {
+        set_paused_handler(ctx, paused)
+    }
+
+    pub fn update_fees(
+        ctx: Context<AdminOnly>,
+        swap_fee_bps: u16,
+        treasury_fee_bps: u16,
+    ) -> Result<()> {
+        update_fees_handler(ctx, swap_fee_bps, treasury_fee_bps)
+    }
+
+    pub fn propose_admin(ctx: Context<AdminOnly>, new_admin: Pubkey) -> Result<()> {
+        propose_admin_handler(ctx, new_admin)
+    }
+
+    pub fn cancel_admin_transfer(ctx: Context<AdminOnly>) -> Result<()> {
+        cancel_admin_transfer_handler(ctx)
+    }
+
+    pub fn accept_admin(ctx: Context<AcceptAdmin>) -> Result<()> {
+        accept_admin_handler(ctx)
     }
 }

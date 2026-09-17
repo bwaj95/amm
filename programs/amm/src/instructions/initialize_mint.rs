@@ -17,7 +17,8 @@ pub struct InitializeMint<'info> {
 
     #[account(
         seeds = [PROTOCOL_CONFIG_SEED],
-        bump
+        bump = protocol_config.bump,
+        has_one = admin @ AmmError::UnauthorizedAdmin,
     )]
     pub protocol_config: Account<'info, ProtocolConfig>,
 
@@ -60,9 +61,9 @@ pub struct MintTokens<'info> {
 
     #[account(
         seeds = [PROTOCOL_CONFIG_SEED],
-        bump,
+        bump = protocol_config.bump,
 
-        has_one = admin
+        has_one = admin @ AmmError::UnauthorizedAdmin,
     )]
     pub protocol_config: Account<'info, ProtocolConfig>,
 

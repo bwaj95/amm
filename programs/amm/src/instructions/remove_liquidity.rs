@@ -2,15 +2,13 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::anchor_utils::{
-    burn_tokens, transfer_tokens_checked, transfer_tokens_checked_with_signer,
-};
-use crate::constants::{POOL_SEED, PROTOCOL_CONFIG_SEED};
-use crate::error::AmmError::{self};
-use crate::events::{LiquidityRemoved, SwapExecuted};
-use crate::state::{Pool, ProtocolConfig, ProtocolTreasury};
-use crate::utils::{calculate_remove_liquidity, calculate_swap, SwapCalculation};
-use crate::{LP_MINT_DECIMALS, LP_MINT_SEED, MINIMUM_LIQUIDITY, TREASURY_SEED};
+use crate::anchor_utils::{burn_tokens, transfer_tokens_checked_with_signer};
+use crate::constants::POOL_SEED;
+use crate::error::AmmError;
+use crate::events::LiquidityRemoved;
+use crate::state::Pool;
+use crate::utils::{calculate_remove_liquidity, validate_deadline};
+use crate::{LP_MINT_DECIMALS, LP_MINT_SEED, MINIMUM_LIQUIDITY};
 
 #[derive(Accounts)]
 pub struct RemoveLiquidity<'info> {
@@ -85,7 +83,10 @@ pub fn remove_liquidity_handler(
     lp_amount: u64,
     min_amount_a: u64,
     min_amount_b: u64,
+    deadline: i64,
 ) -> Result<()> {
+    validate_deadline(deadline, Clock::get()?.unix_timestamp)?;
+
     require!(
         ctx.accounts.lp_mint.supply >= MINIMUM_LIQUIDITY,
         AmmError::InvalidLiquidityPoolState
