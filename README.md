@@ -1,6 +1,6 @@
 # Solana Constant-Product AMM
 
-An automated market maker built with Anchor on Solana. The program implements a constant-product curve directly in Rust, supports liquidity provision and bidirectional token swaps, and includes protocol fees, treasury collection, slippage protection, minimum locked liquidity, events, and LiteSVM integration tests.
+An automated market maker built with Anchor on Solana. The program implements a constant-product curve directly in Rust, supports liquidity provision and bidirectional token swaps, and includes protocol fees, treasury collection, deadlines, slippage protection, emergency pause controls, two-step administration, minimum locked liquidity, events, and LiteSVM integration tests.
 
 This project was originally built before the Turbin3 Q3 Builders cohort and is submitted for the Week 3 AMM assignment.
 
@@ -14,9 +14,9 @@ This project was originally built before the Turbin3 Q3 Builders cohort and is s
 | Implement a CPMM without a library | Constant-product, LP-minting, withdrawal, fee, and rounding calculations are implemented directly in Rust |
 | Reason about downtime mitigation | See [Downtime and Resilience](#downtime-and-resilience) |
 
-## Passing Test Suite
+## Assignment Test Suite
 
-> Save the two test screenshots under the following paths before submission, or update these links to match the filenames used in the repository.
+The screenshots below capture the original assignment baseline. The production-hardening suite adds authorization, pause, deadline, reverse-swap, rounding, boundary, and invariant tests.
 
 ![Passing AMM tests - part 1](docs/tests-passing-1.png)
 
@@ -32,15 +32,21 @@ This project was originally built before the Turbin3 Q3 Builders cohort and is s
 - Bidirectional swaps using the constant-product invariant
 - Swap fees shared between liquidity providers and the protocol treasury
 - Slippage protection for swaps, deposits, and withdrawals
+- Deadlines for every price-sensitive user operation
+- Emergency pause for pool creation, deposits, and swaps while preserving withdrawals
+- Admin-only fee and pause controls
+- Two-step admin transfer with cancellation
+- On-chain post-swap constant-product validation
+- Explicit floor-rounding and dust policy
 - Minimum locked LP liquidity
-- Events for important pool operations
+- Events for pool operations and governance changes
 - Rust integration tests using LiteSVM
 
 ## Program Instructions
 
 ### `initialize_protocol`
 
-Initializes the protocol configuration with the administrator, swap-fee rate, treasury-fee rate, treasury authority, pause state, and PDA bump.
+Initializes the protocol configuration with the administrator, swap-fee rate, treasury-fee rate, treasury authority, pause state, and PDA bump. Governance cannot configure a swap fee above 10%, and the treasury fee cannot exceed the total swap fee.
 
 ### `create_pool`
 
@@ -51,15 +57,15 @@ Creates a pool for a canonically ordered pair of token mints. It initializes:
 - The LP-token mint
 - Treasury token accounts for collecting protocol fees
 
-The two mints must be different, and `mint_a < mint_b` is enforced so that the same pair cannot be created again with its mints reversed.
+The two mints must be different, and `mint_a < mint_b` is enforced so that the same pair cannot be created again with its mints reversed. Treasury token accounts are reused safely when multiple pools share a mint.
 
 ### `add_initial_liquidity`
 
-Deposits the first reserves, establishes the initial pool price, and mints the first LP tokens. A small minimum amount of LP liquidity is permanently locked so that the LP supply cannot return to zero while the pool remains active.
+Deposits the first reserves, establishes the initial pool price, and mints the first LP tokens. A small minimum amount of LP liquidity is permanently locked so that the LP supply cannot return to zero while the pool remains active. `min_lp_out` and `deadline` protect the provider, and both vaults must be empty before initialization so a direct token donation cannot distort the initial ownership calculation.
 
 ### `add_liquidity`
 
-Accepts maximum Token A and Token B amounts, calculates the balanced deposit at the pool's current reserve ratio, and leaves any excess tokens with the provider. LP tokens are minted proportionally to the provider's contribution.
+Accepts maximum Token A and Token B amounts, calculates the balanced deposit at the pool's current reserve ratio, and leaves any excess tokens with the provider. LP tokens are minted proportionally to the provider's contribution. The transaction fails if the result is below `min_lp_out` or after `deadline`.
 
 ### `swap`
 
@@ -68,13 +74,23 @@ Swaps Token A for Token B or Token B for Token A. The instruction:
 1. Selects the input and output reserves from the swap direction.
 2. Calculates the total fee and protocol-treasury share.
 3. Applies the constant-product formula using the effective input.
-4. Enforces the user's minimum output.
-5. Transfers the input, treasury fee, and output tokens.
-6. Verifies that the pool invariant has not improperly decreased.
+4. Enforces the user's minimum output and deadline.
+5. Calculates the expected post-swap reserves and verifies that `k` cannot decrease.
+6. Transfers the input, treasury fee, and output tokens atomically.
 
 ### `remove_liquidity`
 
-Burns LP tokens and returns the provider's proportional share of both reserves. The provider supplies minimum acceptable Token A and Token B outputs for slippage protection.
+Burns LP tokens and returns the provider's proportional share of both reserves. The provider supplies minimum acceptable Token A and Token B outputs for slippage protection plus a deadline. Withdrawals remain available during a protocol pause so liquidity providers retain an exit path.
+
+### Administrative instructions
+
+| Instruction | Authority and effect |
+| --- | --- |
+| `set_paused` | Current admin pauses or resumes pool creation, deposits, and swaps |
+| `update_fees` | Current admin updates validated swap and treasury fee rates while the protocol is paused |
+| `propose_admin` | Current admin nominates a non-default replacement |
+| `accept_admin` | Pending admin signs to accept responsibility |
+| `cancel_admin_transfer` | Current admin cancels an outstanding nomination |
 
 ### Test utilities
 
@@ -178,10 +194,17 @@ The operation succeeds only when both results meet the provider's minimum reques
 - Users authorize transfers from their own token accounts.
 - Swap, deposit, and withdrawal results are recalculated on-chain.
 - Slippage limits protect users from stale quotes and front-running price changes.
+- Deadlines prevent a signed instruction from executing after the user's quote-validity window.
+- Pause and fee changes require the current administrator.
+- Fee changes require a paused protocol so quotes cannot race a live configuration transition.
+- Administration cannot change in one step; the nominated key must explicitly accept.
+- Initial vaults must be empty before LP ownership is established.
 - Minimum locked liquidity prevents the active LP supply from reaching zero.
-- Integer rounding is deterministic; token output and LP ownership cannot contain fractional base units.
+- Integer calculations use deliberate floor rounding: an unrepresentable fractional fee is not charged, while output and withdrawal remainders stay in the pool.
+- Tiny valid swaps may therefore pay zero fee in token base units; this behavior is explicit and tested.
+- Residual withdrawal dust continues backing the permanently locked LP position.
 - Larger intermediate integer arithmetic reduces overflow risk in multiplication-heavy calculations.
-- The post-swap invariant is checked so a successful swap cannot improperly reduce `k`.
+- The post-swap invariant is enforced on-chain so a successful swap cannot improperly reduce `k`.
 
 ## Downtime and Resilience
 
@@ -230,18 +253,25 @@ The test suite covers:
 - Test-token minting
 - Pool creation
 - Invalid mint ordering
+- Reuse of treasury token accounts across pools sharing a mint
 - Initial liquidity provision
+- Initial-liquidity deadline, LP slippage, and pre-funded-vault rejection
 - Balanced subsequent liquidity
 - Unbalanced maximum amounts with excess tokens left to the provider
-- A-to-B swap execution
+- Deposit LP-output protection
+- A-to-B and B-to-A swap execution
+- Swap slippage and deadline rejection
+- Admin authorization, fee changes, pause/unpause, and two-step transfer
+- Withdrawals remaining available while paused
 - Liquidity removal
+- Arithmetic rounding, overflow boundaries, dust behavior, and invariant checks
 
 ### Run the tests
 
 ```bash
 cargo fmt
 anchor build
-cargo test
+cargo test --workspace
 ```
 
 ## Technologies

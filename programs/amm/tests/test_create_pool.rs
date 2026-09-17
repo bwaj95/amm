@@ -132,6 +132,36 @@ fn create_pool_fails_with_invalid_mint_order() {
         .any(|log| log.contains("Error Code: InvalidMintOrder")));
 }
 
+#[test]
+fn pools_can_share_a_treasury_token_account_for_the_same_mint() {
+    let program_id = amm_protocol::id();
+    let mut ctx = TestContext::new(program_id);
+
+    initialize_protocol(&mut ctx).unwrap();
+    initialize_mint::initialize_mint(&mut ctx, 1, 6).unwrap();
+    initialize_mint::initialize_mint(&mut ctx, 2, 9).unwrap();
+    initialize_mint::initialize_mint(&mut ctx, 3, 9).unwrap();
+
+    let mint_1 = find_mint_pda(&program_id, 1).0;
+    let mint_2 = find_mint_pda(&program_id, 2).0;
+    let mint_3 = find_mint_pda(&program_id, 3).0;
+
+    let first_pair = canonical_mint_order(mint_1, mint_2);
+    let second_pair = canonical_mint_order(mint_1, mint_3);
+
+    create_pool(&mut ctx, &first_pair.0, &first_pair.1).unwrap();
+    create_pool(&mut ctx, &second_pair.0, &second_pair.1).unwrap();
+
+    let shared_mint = mint_1;
+    let protocol_treasury = find_protocol_treasury_pda(&program_id).0;
+    let shared_treasury_ata =
+        get_associated_token_address(&protocol_treasury, &shared_mint);
+    let shared_treasury_account = token_account(&ctx, &shared_treasury_ata);
+
+    assert_eq!(shared_treasury_account.mint, shared_mint);
+    assert_eq!(shared_treasury_account.owner, protocol_treasury);
+}
+
 pub fn canonical_mint_order(a: Pubkey, b: Pubkey) -> (Pubkey, Pubkey) {
     if a < b {
         (a, b)

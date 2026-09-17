@@ -19,9 +19,31 @@ pub fn setup_initialized_pool(
     initial_amount_a: u64,
     initial_amount_b: u64,
 ) -> Result<(InitializedPoolStruct, bool), FailedTransactionMetadata> {
-    let program_id = ctx.program_id;
     let mut amount_a = initial_amount_a;
     let mut amount_b = initial_amount_b;
+
+    let (pool_struct, mints_swapped) = setup_empty_pool(ctx, alice_mint_amount)?;
+
+    if mints_swapped {
+        std::mem::swap(&mut amount_a, &mut amount_b);
+    }
+
+    add_initial_liquidity(
+        ctx,
+        &pool_struct.mint_a,
+        &pool_struct.mint_b,
+        amount_a,
+        amount_b,
+    )?;
+
+    Ok((pool_struct, mints_swapped))
+}
+
+pub fn setup_empty_pool(
+    ctx: &mut TestContext,
+    alice_mint_amount: u64,
+) -> Result<(InitializedPoolStruct, bool), FailedTransactionMetadata> {
+    let program_id = ctx.program_id;
 
     // 1. Initilize Protocol
     initialize_protocol(ctx)?;
@@ -42,7 +64,6 @@ pub fn setup_initialized_pool(
         println!("mint Canonical swapping....");
         std::mem::swap(&mut mint_a, &mut mint_b);
         std::mem::swap(&mut mint_a_id, &mut mint_b_id);
-        std::mem::swap(&mut amount_a, &mut amount_b);
         mints_swapped = true;
     }
 
@@ -60,7 +81,7 @@ pub fn setup_initialized_pool(
 
     mint_tokens(ctx, &alice, &alice_token_b, mint_b_id, alice_mint_amount)?;
 
-    // 6. Derive Pool Infra - to add the initial liquidity
+    // 6. Derive Pool Infra
     let (pool, _) = find_pool_pda(&program_id, &mint_a, &mint_b);
 
     let vault_a = get_associated_token_address(&pool, &mint_a);
@@ -74,9 +95,6 @@ pub fn setup_initialized_pool(
     let (protocol_treasury, _) = find_protocol_treasury_pda(&ctx.program_id);
     let treasury_a = get_associated_token_address(&protocol_treasury, &mint_a);
     let treasury_b = get_associated_token_address(&protocol_treasury, &mint_b);
-
-    // 7. Add Initial Liquidity
-    add_initial_liquidity(ctx, &mint_a, &mint_b, amount_a, amount_b)?;
 
     let pool_struct = InitializedPoolStruct {
         pool,

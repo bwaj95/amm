@@ -1,5 +1,4 @@
 use ::amm as amm_program;
-use amm::state::protocol_config;
 use amm_program::{accounts, instruction};
 
 use anchor_lang::{system_program, InstructionData, ToAccountMetas};
@@ -176,9 +175,12 @@ pub fn add_initial_liquidity_ix(
     provider: &Pubkey,
     amount_token_a: u64,
     amount_token_b: u64,
+    min_lp_out: u64,
+    deadline: i64,
 ) -> Instruction {
     let program_id = ctx.program_id;
 
+    let (protocol_config, _) = find_protocol_config_pda(&program_id);
     let (pool, _) = find_pool_pda(&program_id, mint_a, mint_b);
     let vault_a = get_associated_token_address(&pool, mint_a);
     let vault_b = get_associated_token_address(&pool, mint_b);
@@ -190,6 +192,7 @@ pub fn add_initial_liquidity_ix(
 
     let accounts = accounts::AddInitialLiquidity {
         provider: *provider,
+        protocol_config,
         pool,
         mint_a: *mint_a,
         mint_b: *mint_b,
@@ -212,6 +215,8 @@ pub fn add_initial_liquidity_ix(
         data: instruction::AddInitialLiquidity {
             amount_token_a,
             amount_token_b,
+            min_lp_out,
+            deadline,
         }
         .data(),
     };
@@ -226,6 +231,8 @@ pub fn add_liquidity_ix(
     provider: &Pubkey,
     max_amount_a: u64,
     max_amount_b: u64,
+    min_lp_out: u64,
+    deadline: i64,
 ) -> Instruction {
     let program_id = &ctx.program_id;
     // derive pool, 2 vaults, lp mint, 2 user-atas, user lp mint
@@ -236,9 +243,11 @@ pub fn add_liquidity_ix(
     let provider_token_a = get_associated_token_address(provider, mint_a);
     let provider_token_b = get_associated_token_address(provider, mint_b);
     let provider_lp = get_associated_token_address(provider, &lp_mint);
+    let (protocol_config, _) = find_protocol_config_pda(program_id);
 
     let accounts = accounts::AddLiquidity {
         provider: *provider,
+        protocol_config,
         pool,
         mint_a: *mint_a,
         mint_b: *mint_b,
@@ -260,6 +269,8 @@ pub fn add_liquidity_ix(
         data: instruction::AddLiquidity {
             max_amount_a,
             max_amount_b,
+            min_lp_out,
+            deadline,
         }
         .data(),
     };
@@ -275,6 +286,7 @@ pub fn swap_ix(
     amount_in: u64,
     min_amount_out: u64,
     a_to_b: bool,
+    deadline: i64,
 ) -> Instruction {
     let program_id = ctx.program_id;
 
@@ -316,6 +328,7 @@ pub fn swap_ix(
             amount_in,
             min_amount_out,
             a_to_b,
+            deadline,
         }
         .data(),
     };
@@ -331,6 +344,7 @@ pub fn remove_liquidity_ix(
     lp_amount: u64,
     min_amount_a: u64,
     min_amount_b: u64,
+    deadline: i64,
 ) -> Instruction {
     let program_id = &ctx.program_id;
 
@@ -378,7 +392,101 @@ pub fn remove_liquidity_ix(
             lp_amount,
             min_amount_a,
             min_amount_b,
+            deadline,
         }
         .data(),
+    }
+}
+
+pub fn set_paused_ix(ctx: &TestContext, admin: &Pubkey, paused: bool) -> Instruction {
+    let (protocol_config, _) = find_protocol_config_pda(&ctx.program_id);
+
+    let accounts = accounts::AdminOnly {
+        admin: *admin,
+        protocol_config,
+    }
+    .to_account_metas(None);
+
+    Instruction {
+        program_id: ctx.program_id,
+        accounts,
+        data: instruction::SetPaused { paused }.data(),
+    }
+}
+
+pub fn update_fees_ix(
+    ctx: &TestContext,
+    admin: &Pubkey,
+    swap_fee_bps: u16,
+    treasury_fee_bps: u16,
+) -> Instruction {
+    let (protocol_config, _) = find_protocol_config_pda(&ctx.program_id);
+
+    let accounts = accounts::AdminOnly {
+        admin: *admin,
+        protocol_config,
+    }
+    .to_account_metas(None);
+
+    Instruction {
+        program_id: ctx.program_id,
+        accounts,
+        data: instruction::UpdateFees {
+            swap_fee_bps,
+            treasury_fee_bps,
+        }
+        .data(),
+    }
+}
+
+pub fn propose_admin_ix(
+    ctx: &TestContext,
+    admin: &Pubkey,
+    new_admin: Pubkey,
+) -> Instruction {
+    let (protocol_config, _) = find_protocol_config_pda(&ctx.program_id);
+
+    let accounts = accounts::AdminOnly {
+        admin: *admin,
+        protocol_config,
+    }
+    .to_account_metas(None);
+
+    Instruction {
+        program_id: ctx.program_id,
+        accounts,
+        data: instruction::ProposeAdmin { new_admin }.data(),
+    }
+}
+
+pub fn cancel_admin_transfer_ix(ctx: &TestContext, admin: &Pubkey) -> Instruction {
+    let (protocol_config, _) = find_protocol_config_pda(&ctx.program_id);
+
+    let accounts = accounts::AdminOnly {
+        admin: *admin,
+        protocol_config,
+    }
+    .to_account_metas(None);
+
+    Instruction {
+        program_id: ctx.program_id,
+        accounts,
+        data: instruction::CancelAdminTransfer {}.data(),
+    }
+}
+
+pub fn accept_admin_ix(ctx: &TestContext, pending_admin: &Pubkey) -> Instruction {
+    let (protocol_config, _) = find_protocol_config_pda(&ctx.program_id);
+
+    let accounts = accounts::AcceptAdmin {
+        pending_admin: *pending_admin,
+        protocol_config,
+    }
+    .to_account_metas(None);
+
+    Instruction {
+        program_id: ctx.program_id,
+        accounts,
+        data: instruction::AcceptAdmin {}.data(),
     }
 }

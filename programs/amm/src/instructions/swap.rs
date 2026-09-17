@@ -7,7 +7,9 @@ use crate::constants::{POOL_SEED, PROTOCOL_CONFIG_SEED};
 use crate::error::AmmError::{self};
 use crate::events::SwapExecuted;
 use crate::state::{Pool, ProtocolConfig, ProtocolTreasury};
-use crate::utils::{calculate_swap, SwapCalculation};
+use crate::utils::{
+    calculate_swap, validate_constant_product, validate_deadline, SwapCalculation,
+};
 use crate::TREASURY_SEED;
 
 #[derive(Accounts)]
@@ -84,7 +86,9 @@ pub struct Swap<'info> {
 
     #[account(
         seeds = [PROTOCOL_CONFIG_SEED],
-        bump = protocol_config.bump
+        bump = protocol_config.bump,
+        has_one = protocol_treasury,
+        constraint = !protocol_config.paused @ AmmError::ProtocolPaused,
     )]
     pub protocol_config: Box<Account<'info, ProtocolConfig>>,
 
@@ -100,7 +104,10 @@ pub fn swap_handler(
     amount_in: u64,
     min_amount_out: u64,
     a_to_b: bool,
+    deadline: i64,
 ) -> Result<()> {
+    validate_deadline(deadline, Clock::get()?.unix_timestamp)?;
+
     let (mint_in, mint_out, vault_in, vault_out, provider_in, provider_out, treasury_in) = if a_to_b
     {
         (
@@ -143,6 +150,25 @@ pub fn swap_handler(
         swap_calculation.amount_out >= min_amount_out,
         AmmError::SlippageExceeded
     );
+
+    let reserve_in_after = vault_in
+        .amount
+        .checked_add(amount_in)
+        .ok_or(AmmError::MathOverflow)?
+        .checked_sub(swap_calculation.treasury_fees)
+        .ok_or(AmmError::MathOverflow)?;
+
+    let reserve_out_after = vault_out
+        .amount
+        .checked_sub(swap_calculation.amount_out)
+        .ok_or(AmmError::MathOverflow)?;
+
+    validate_constant_product(
+        vault_in.amount,
+        vault_out.amount,
+        reserve_in_after,
+        reserve_out_after,
+    )?;
 
     //  cpi transfer checked amount_in from provider_in to vault_in
     transfer_tokens_checked(
@@ -200,6 +226,8 @@ pub fn swap_handler(
         treasury_fee: swap_calculation.treasury_fees,
         lp_fee: swap_calculation.lp_fees,
         total_fee: swap_calculation.total_swap_fees,
+        reserve_in_after,
+        reserve_out_after,
     });
 
     Ok(())

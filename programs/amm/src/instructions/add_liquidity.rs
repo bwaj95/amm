@@ -3,11 +3,11 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::anchor_utils::{mint_tokens, transfer_tokens_checked};
-use crate::constants::{LP_MINT_SEED, POOL_SEED};
+use crate::constants::{LP_MINT_SEED, POOL_SEED, PROTOCOL_CONFIG_SEED};
 use crate::events::LiquidityAdded;
-use crate::state::Pool;
-use crate::utils::calculate_add_liquidity;
-use crate::{LP_MINT_DECIMALS, MINIMUM_LIQUIDITY};
+use crate::state::{Pool, ProtocolConfig};
+use crate::utils::{calculate_add_liquidity, validate_deadline};
+use crate::LP_MINT_DECIMALS;
 
 use crate::error::AmmError;
 
@@ -15,6 +15,13 @@ use crate::error::AmmError;
 pub struct AddLiquidity<'info> {
     #[account(mut)]
     pub provider: Signer<'info>,
+
+    #[account(
+        seeds = [PROTOCOL_CONFIG_SEED],
+        bump = protocol_config.bump,
+        constraint = !protocol_config.paused @ AmmError::ProtocolPaused,
+    )]
+    pub protocol_config: Box<Account<'info, ProtocolConfig>>,
 
     #[account(
         seeds= [POOL_SEED, mint_a.key().as_ref(), mint_b.key().as_ref()],
@@ -87,7 +94,11 @@ pub fn add_liquidity_handler(
     ctx: Context<AddLiquidity>,
     max_amount_a: u64,
     max_amount_b: u64,
+    min_lp_out: u64,
+    deadline: i64,
 ) -> Result<()> {
+    validate_deadline(deadline, Clock::get()?.unix_timestamp)?;
+
     require!(
         max_amount_a > 0 && max_amount_b > 0,
         AmmError::InvalidInputAmount
@@ -100,6 +111,8 @@ pub fn add_liquidity_handler(
         max_amount_b,
         ctx.accounts.lp_mint.supply,
     )?;
+
+    require!(lp_to_mint >= min_lp_out, AmmError::SlippageExceeded);
 
     require!(
         ctx.accounts.provider_token_a.amount >= actual_a
@@ -172,8 +185,6 @@ pub fn add_liquidity_handler(
         &ctx.accounts.token_program.to_account_info(),
         lp_to_mint,
     )?;
-
-    
 
     emit!(LiquidityAdded {
         pool: ctx.accounts.pool.key(),

@@ -1,13 +1,14 @@
 pub mod pdas;
 pub mod instructions;
 pub mod accounts;
+pub mod admin;
 pub mod initialize_protocol;
 pub mod create_pool;
 pub mod initialize_mint;
 pub mod mint_tokens;
-pub mod  add_initial_liquidity;
+pub mod add_initial_liquidity;
 pub mod add_liquidity;
 pub mod fixtures;
 pub mod structs;
-pub mod  swap;
+pub mod swap;
 pub mod remove_liquidity;

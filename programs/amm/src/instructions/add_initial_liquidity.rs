@@ -4,18 +4,25 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::anchor_utils::{mint_tokens, transfer_tokens_checked};
 use crate::events::InitialLiquidityAdded;
-use crate::state::Pool;
+use crate::state::{Pool, ProtocolConfig};
 
-use crate::constants::{LOCKED_LP_SEED, LP_MINT_DECIMALS, POOL_SEED};
+use crate::constants::{LOCKED_LP_SEED, LP_MINT_DECIMALS, POOL_SEED, PROTOCOL_CONFIG_SEED};
 
-use crate::error::AmmError::{self, *};
-use crate::utils::calculate_lp_initial;
+use crate::error::AmmError;
+use crate::utils::{calculate_lp_initial, validate_deadline};
 use crate::MINIMUM_LIQUIDITY;
 
 #[derive(Accounts)]
 pub struct AddInitialLiquidity<'info> {
     #[account(mut)]
     pub provider: Signer<'info>,
+
+    #[account(
+        seeds = [PROTOCOL_CONFIG_SEED],
+        bump = protocol_config.bump,
+        constraint = !protocol_config.paused @ AmmError::ProtocolPaused,
+    )]
+    pub protocol_config: Box<Account<'info, ProtocolConfig>>,
 
     #[account(
         seeds = [POOL_SEED, mint_a.key().as_ref(), mint_b.key().as_ref()],
@@ -97,11 +104,20 @@ pub fn add_initial_liquidity_handler(
     ctx: Context<AddInitialLiquidity>,
     amount_token_a: u64,
     amount_token_b: u64,
+    min_lp_out: u64,
+    deadline: i64,
 ) -> Result<()> {
+    validate_deadline(deadline, Clock::get()?.unix_timestamp)?;
+
     //  check if pool  liquidity is truly uninitialised -> vault a b amount, lp suppkyu all 0
     require!(
         ctx.accounts.lp_mint.supply == 0 && ctx.accounts.locked_lp_token.amount == 0,
         AmmError::PoolAlreadyInitialized
+    );
+
+    require!(
+        ctx.accounts.vault_a.amount == 0 && ctx.accounts.vault_b.amount == 0,
+        AmmError::InitialVaultsNotEmpty
     );
 
     //  validate non zero deposit amounts, also validate amount avail in token accounts
@@ -122,6 +138,12 @@ pub fn add_initial_liquidity_handler(
         initial_lp > MINIMUM_LIQUIDITY,
         AmmError::MinimumLiquidityThresholdNotMet
     );
+
+    let provider_lp = initial_lp
+        .checked_sub(MINIMUM_LIQUIDITY)
+        .ok_or(AmmError::MathOverflow)?;
+
+    require!(provider_lp >= min_lp_out, AmmError::SlippageExceeded);
 
     // cpi 2 token transfers
     transfer_tokens_checked(
@@ -166,7 +188,6 @@ pub fn add_initial_liquidity_handler(
     )?;
 
     // mint remaining lp to provider lp ata
-    let provider_lp: u64 = initial_lp - MINIMUM_LIQUIDITY;
     mint_tokens(
         &ctx.accounts.lp_mint.to_account_info(),
         &ctx.accounts.provider_lp_token.to_account_info(),

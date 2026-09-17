@@ -24,7 +24,8 @@ pub struct CreatePool<'info> {
 
     #[account(
         seeds=[PROTOCOL_CONFIG_SEED],
-        bump
+        bump = protocol_config.bump,
+        constraint = !protocol_config.paused @ AmmError::ProtocolPaused,
     )]
     pub protocol_config: Box<Account<'info, ProtocolConfig>>,
 
@@ -32,7 +33,7 @@ pub struct CreatePool<'info> {
     pub mint_b: Box<Account<'info, Mint>>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = creator,
         space = 8 + Pool::INIT_SPACE,
         constraint = mint_a.key() != mint_b.key() @ AmmError::SameMint,
@@ -65,7 +66,7 @@ pub struct CreatePool<'info> {
     pub protocol_treasury: Box<Account<'info, ProtocolTreasury>>,
 
     #[account(
-    init,
+    init_if_needed,
     payer = creator,
     associated_token::mint = mint_a,
     associated_token::authority = protocol_treasury,
