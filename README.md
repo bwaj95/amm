@@ -16,7 +16,6 @@ This project was originally built before the Turbin3 Q3 Builders cohort and is s
 
 ## Passing Test Suite
 
-> Save the two test screenshots under the following paths before submission, or update these links to match the filenames used in the repository.
 
 ![Passing AMM tests - part 1](docs/tests-passing-1.png)
 

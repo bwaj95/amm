@@ -43,19 +43,31 @@ pub enum AmmError {
 
     #[msg("Invalid values for swap fee and treasury fee.")]
     InvalidFeeConfig,
-   
+
     #[msg("Amount Insufficient to make a swap.")]
     InsufficientSwapAmount,
-   
+
     #[msg("Amaount not sufficient for given slippage.")]
     SlippageExceeded,
-   
+
     #[msg("Insufficient liquidity in the pool.")]
     InsufficientLiquidity,
-    
+
     #[msg("Insufficient liquidity in the pool.")]
     InvalidLiquidityPoolState,
-    
+
     #[msg("Liquidity amount too small to redeem.")]
     InsufficientLiquidityOutput,
+
+    #[msg("Pool vaults need to be empty before initialization.")]
+    InitialVaultNotEmpty,
+
+    #[msg("Instruction Deprecated.")]
+    DeprecatedInstruction,
+
+    #[msg("Protocol has been paused.")]
+    ProtocolPaused,
+
+    #[msg("Deadline to execute the transaction has exceeded.")]
+    DeadlineExceeded,
 }

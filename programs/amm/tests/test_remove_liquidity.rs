@@ -1,3 +1,5 @@
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 use crate::{
     amm::{
         accounts::{ata, mint, pool, protocol_config, token_account},
@@ -31,11 +33,19 @@ pub fn test_remove_liquidity_success() {
     let program_id = amm_protocol::ID;
     let mut ctx = TestContext::new(program_id);
 
+    let future_time = SystemTime::now() + Duration::from_secs(5);
+    let since_the_epoch = future_time
+        .duration_since(UNIX_EPOCH)
+        .expect("Time calculation error.");
+    let deadline = since_the_epoch.as_secs() as i64;
+
     let (pool_struct, _) = setup_initialized_pool(
         &mut ctx,
         500_000_000_000_u64,
         10_000_000_000_u64,
         40_000_000_000_u64,
+        10_000_000_u64,
+        deadline,
     )
     .unwrap();
 

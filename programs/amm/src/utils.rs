@@ -1,6 +1,4 @@
-use anchor_lang::require;
-
-use crate::{error::AmmError, MAX_BPS, MINIMUM_LIQUIDITY};
+use crate::{error::AmmError, MAX_BPS};
 
 pub fn calculate_lp_initial(amount_token_a: u64, amount_token_b: u64) -> Result<u64, AmmError> {
     let product = (amount_token_a as u128)
@@ -183,6 +181,14 @@ pub fn calculate_remove_liquidity(
     }
 
     Ok(LpRemoveCalculation { amount_a, amount_b })
+}
+
+pub fn validate_deadline(deadline: i64, current_timestamp: i64) -> Result<(), AmmError> {
+    if current_timestamp > deadline {
+        return Err(AmmError::DeadlineExceeded);
+    }
+
+    Ok(())
 }
 
 pub struct SwapCalculation {

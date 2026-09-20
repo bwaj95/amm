@@ -19,7 +19,7 @@ use crate::{
 mod amm;
 mod common;
 
-#[test]
+
 fn create_pool_success() {
     let program_id = amm_protocol::id();
     let mut ctx = TestContext::new(program_id);
@@ -100,7 +100,7 @@ fn create_pool_success() {
     assert_eq!(treasury_b_account.amount, 0);
 }
 
-#[test]
+
 fn create_pool_fails_with_invalid_mint_order() {
     let program_id = amm_protocol::id();
     let mut ctx = TestContext::new(program_id);

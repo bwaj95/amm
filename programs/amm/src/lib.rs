@@ -11,7 +11,7 @@ use anchor_lang::prelude::*;
 pub use constants::*;
 pub use instructions::*;
 
-declare_id!("5MyQPKV12rGp2c3ce3qeA8yk2BdDhVJvBJt6TePeRe5F");
+declare_id!("DhdHwP7YgAT3VHvmhzQgXonvFTKWQ5Gb2uYTxYJMX5Lh");
 
 #[program]
 pub mod amm {
@@ -69,5 +69,21 @@ pub mod amm {
         min_amount_b: u64,
     ) -> Result<()> {
         remove_liquidity_handler(ctx, lp_amount, min_amount_a, min_amount_b)
+    }
+
+    pub fn initialize_pool_with_liquidity(
+        ctx: Context<InitializePoolWithLiquidity>,
+        amount_token_a: u64,
+        amount_token_b: u64,
+        min_lp_out: u64,
+        deadline: i64,
+    ) -> Result<()> {
+        initialize_pool_with_liquidity_handler(
+            ctx,
+            amount_token_a,
+            amount_token_b,
+            min_lp_out,
+            deadline,
+        )
     }
 }

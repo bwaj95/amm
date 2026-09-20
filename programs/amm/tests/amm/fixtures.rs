@@ -1,3 +1,4 @@
+use amm::initialize_pool_with_liquidity;
 use anchor_spl::associated_token::get_associated_token_address;
 use litesvm::{types::FailedTransactionMetadata, LiteSVM};
 use solana_keypair::Keypair;
@@ -5,10 +6,21 @@ use solana_pubkey::Pubkey;
 
 use crate::{
     amm::{
-        accounts::{mint, pool, protocol_treasury, token_account}, add_initial_liquidity::add_initial_liquidity, add_liquidity::add_liquidity, create_pool::create_pool, initialize_mint::initialize_mint, initialize_protocol::initialize_protocol, mint_tokens::mint_tokens, pdas::{
+        accounts::{mint, pool, protocol_treasury, token_account},
+        add_initial_liquidity::add_initial_liquidity,
+        add_liquidity::add_liquidity,
+        create_pool::create_pool,
+        initialize_mint::initialize_mint,
+        initialize_pool_with_liquidity::initialize_pool_with_liquidity,
+        initialize_protocol::initialize_protocol,
+        mint_tokens::mint_tokens,
+        pdas::{
             find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
-            find_protocol_treasury_pda,
-        }, remove_liquidity::remove_liquidity, structs::{InitializedPoolStruct, PoolReservesSnapshot, UserPoolAccounts}, swap::{self, swap}
+            find_protocol_treasury_pda, find_vault_a_pda, find_vault_b_pda,
+        },
+        remove_liquidity::remove_liquidity,
+        structs::{InitializedPoolStruct, PoolReservesSnapshot, UserPoolAccounts},
+        swap::{self, swap},
     },
     common::context::TestContext,
 };
@@ -18,6 +30,8 @@ pub fn setup_initialized_pool(
     alice_mint_amount: u64,
     initial_amount_a: u64,
     initial_amount_b: u64,
+    min_lp_out: u64,
+    deadline: i64,
 ) -> Result<(InitializedPoolStruct, bool), FailedTransactionMetadata> {
     let program_id = ctx.program_id;
     let mut amount_a = initial_amount_a;
@@ -46,8 +60,8 @@ pub fn setup_initialized_pool(
         mints_swapped = true;
     }
 
-    // 4. Create Pool
-    create_pool(ctx, &mint_a, &mint_b)?;
+    // 4. Create Pool - Deprecated
+    // create_pool(ctx, &mint_a, &mint_b)?;
 
     // 5. Fund Alice
     let alice = ctx.alice.pubkey();
@@ -63,9 +77,9 @@ pub fn setup_initialized_pool(
     // 6. Derive Pool Infra - to add the initial liquidity
     let (pool, _) = find_pool_pda(&program_id, &mint_a, &mint_b);
 
-    let vault_a = get_associated_token_address(&pool, &mint_a);
+    let (vault_a, _) = find_vault_a_pda(&program_id, &pool);
 
-    let vault_b = get_associated_token_address(&pool, &mint_b);
+    let (vault_b, _) = find_vault_b_pda(&program_id, &pool);
 
     let (lp_mint, _) = find_lp_mint_pda(&program_id, &pool);
 
@@ -75,8 +89,13 @@ pub fn setup_initialized_pool(
     let treasury_a = get_associated_token_address(&protocol_treasury, &mint_a);
     let treasury_b = get_associated_token_address(&protocol_treasury, &mint_b);
 
-    // 7. Add Initial Liquidity
-    add_initial_liquidity(ctx, &mint_a, &mint_b, amount_a, amount_b)?;
+    // 7. Add Initial Liquidity - Deprecated
+    // add_initial_liquidity(ctx, &mint_a, &mint_b, amount_a, amount_b)?;
+
+    // 7. Create Pool With Liquidity
+    initialize_pool_with_liquidity(
+        ctx, &mint_a, &mint_b, amount_a, amount_b, min_lp_out, deadline,
+    )?;
 
     let pool_struct = InitializedPoolStruct {
         pool,

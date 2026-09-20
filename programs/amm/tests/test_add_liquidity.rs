@@ -1,21 +1,15 @@
-use ::amm::{
-    self as amm_protocol, state::protocol_config, utils::calculate_add_liquidity, MINIMUM_LIQUIDITY,
-};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use ::amm::{self as amm_protocol, utils::calculate_add_liquidity, MINIMUM_LIQUIDITY};
 use anchor_spl::associated_token::get_associated_token_address;
 
 use crate::{
     amm::{
-        accounts::{ata, mint, pool, token_account},
+        accounts::{mint, token_account},
         fixtures::{
-            add_liquidity_as_user, derive_user_pool_accounts, fund_tokens_to_user,
-            pool_reserves_snapshot, setup_initialized_pool,
+            add_liquidity_as_user, fund_tokens_to_user, pool_reserves_snapshot,
+            setup_initialized_pool,
         },
-        mint_tokens::mint_tokens,
-        pdas::{
-            find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
-            find_protocol_config_pda,
-        },
-        structs::InitializedPoolStruct,
     },
     common::context::TestContext,
 };
@@ -28,11 +22,19 @@ pub fn test_add_balanced_liquidity_success() {
     let program_id = amm_protocol::ID;
     let mut ctx = TestContext::new(program_id);
 
+    let future_time = SystemTime::now() + Duration::from_secs(5);
+    let since_the_epoch = future_time
+        .duration_since(UNIX_EPOCH)
+        .expect("Time calculation error.");
+    let deadline = since_the_epoch.as_secs() as i64;
+
     let (pool_struct, mints_swapped) = setup_initialized_pool(
         &mut ctx,
         500_000_000_000_u64,
         10_000_000_000_u64,
         40_000_000_000_u64,
+        10_000_000_u64,
+        deadline,
     )
     .unwrap();
 
@@ -108,11 +110,19 @@ pub fn test_add_unbalanced_liquidity_excess_b() {
 
     let mut ctx = TestContext::new(program_id);
 
+    let future_time = SystemTime::now() + Duration::from_secs(5);
+    let since_the_epoch = future_time
+        .duration_since(UNIX_EPOCH)
+        .expect("Time calculation error.");
+    let deadline = since_the_epoch.as_secs() as i64;
+
     let (pool_struct, mints_swapped) = setup_initialized_pool(
         &mut ctx,
         500_000_000_000_u64,
         10_000_000_000_u64,
         40_000_000_000_u64,
+        10_000_000_u64,
+        deadline,
     )
     .unwrap();
 

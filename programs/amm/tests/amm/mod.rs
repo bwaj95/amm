@@ -11,3 +11,4 @@ pub mod fixtures;
 pub mod structs;
 pub mod  swap;
 pub mod remove_liquidity;
+pub mod initialize_pool_with_liquidity;

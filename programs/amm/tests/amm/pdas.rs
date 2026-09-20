@@ -1,4 +1,7 @@
-use amm::{LOCKED_LP_SEED, LP_MINT_SEED, MINT_SEED, POOL_SEED, PROTOCOL_CONFIG_SEED, TREASURY_SEED};
+use amm::{
+    LOCKED_LP_SEED, LP_MINT_SEED, MINT_SEED, POOL_SEED, PROTOCOL_CONFIG_SEED, TREASURY_SEED,
+    VAULT_A_SEED, VAULT_B_SEED,
+};
 use anchor_lang::Key;
 use solana_pubkey::Pubkey;
 
@@ -27,4 +30,12 @@ pub fn find_mint_pda(program_id: &Pubkey, mint_id: u64) -> (Pubkey, u8) {
 
 pub fn find_locked_lp_token_pda(program_id: &Pubkey, pool: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[LOCKED_LP_SEED, pool.as_ref()], program_id)
+}
+
+pub fn find_vault_a_pda(program_id: &Pubkey, pool: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[VAULT_A_SEED, pool.key().as_ref()], program_id)
+}
+
+pub fn find_vault_b_pda(program_id: &Pubkey, pool: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[VAULT_B_SEED, pool.key().as_ref()], program_id)
 }

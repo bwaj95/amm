@@ -4,16 +4,13 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
+use crate::state::{Pool, ProtocolConfig};
 use crate::{
     constants::{POOL_SEED, PROTOCOL_CONFIG_SEED},
     state::ProtocolTreasury,
     LOCKED_LP_SEED, LP_MINT_DECIMALS, TREASURY_SEED,
 };
 use crate::{error::AmmError, LP_MINT_SEED};
-use crate::{
-    events::PoolCreated,
-    state::{Pool, ProtocolConfig},
-};
 
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
@@ -106,30 +103,6 @@ pub struct CreatePool<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-pub fn create_pool_handler(ctx: Context<CreatePool>) -> Result<()> {
-    let pool: &mut Pool = &mut ctx.accounts.pool;
-
-    pool.mint_a = ctx.accounts.mint_a.key();
-    pool.mint_b = ctx.accounts.mint_b.key();
-    pool.vault_a = ctx.accounts.vault_a.key();
-    pool.vault_b = ctx.accounts.vault_b.key();
-    pool.treasury_a = ctx.accounts.treasury_a.key();
-    pool.treasury_b = ctx.accounts.treasury_b.key();
-    pool.lp_mint = ctx.accounts.lp_mint.key();
-    pool.locked_lp_token = ctx.accounts.locked_lp_token.key();
-    pool.bump = ctx.bumps.pool;
-
-    emit!(PoolCreated {
-        pool: ctx.accounts.pool.key(),
-        mint_a: ctx.accounts.mint_a.key(),
-        mint_b: ctx.accounts.mint_b.key(),
-        vault_a: ctx.accounts.vault_a.key(),
-        vault_b: ctx.accounts.vault_b.key(),
-        treasury_a: ctx.accounts.treasury_a.key(),
-        treasury_b: ctx.accounts.treasury_b.key(),
-        lp_mint: ctx.accounts.lp_mint.key(),
-        locked_lp_token: ctx.accounts.locked_lp_token.key(),
-    });
-
-    Ok(())
+pub fn create_pool_handler(_ctx: Context<CreatePool>) -> Result<()> {
+    err!(AmmError::DeprecatedInstruction)
 }

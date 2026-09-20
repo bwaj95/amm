@@ -34,15 +34,17 @@ pub struct Swap<'info> {
 
     #[account(
         mut,
-        associated_token::mint = mint_a,
-        associated_token::authority = pool,
+        address = pool.vault_a,
+        token::mint = mint_a,
+        token::authority = pool
     )]
     pub vault_a: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
-        associated_token::mint = mint_b,
-        associated_token::authority = pool,
+        address = pool.vault_b,
+        token::mint = mint_b,
+        token::authority = pool
     )]
     pub vault_b: Box<Account<'info, TokenAccount>>,
 

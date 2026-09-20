@@ -38,3 +38,10 @@ pub const BONK_MINT: &str = "DezXAZ8z7PnrFcZkpPR3rQHBeq5jXcX6assa5yk6PnAa";
 
 #[constant]
 pub const MINIMUM_LIQUIDITY: u64 = 1000;
+
+#[constant]
+pub const VAULT_A_SEED: &[u8] = b"vault_a";
+
+#[constant]
+pub const VAULT_B_SEED: &[u8] = b"vault_b";
+

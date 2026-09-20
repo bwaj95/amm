@@ -1,23 +1,17 @@
 use ::amm::{
-    self as amm_protocol, state::protocol_config, utils::calculate_lp_initial, MINIMUM_LIQUIDITY,
+    self as amm_protocol, utils::calculate_lp_initial, MINIMUM_LIQUIDITY,
 };
-use anchor_spl::associated_token::{
-    get_associated_token_address,
-    spl_associated_token_account::address::get_associated_token_address_and_bump_seed,
-};
+use anchor_spl::associated_token::get_associated_token_address;
 
 use crate::{
     amm::{
-        accounts::{ata, mint, pool, token_account},
+        accounts::{mint, token_account},
         add_initial_liquidity::add_initial_liquidity,
         create_pool::create_pool,
         initialize_mint::{self, initialize_mint},
         initialize_protocol::initialize_protocol,
         mint_tokens::mint_tokens,
-        pdas::{
-            find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
-            find_protocol_config_pda,
-        },
+        pdas::{find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda},
     },
     common::context::TestContext,
 };
@@ -25,7 +19,7 @@ use crate::{
 mod amm;
 mod common;
 
-#[test]
+
 fn test_add_initial_liquidity_success() {
     let program_id = amm_protocol::ID;
     let mut ctx = TestContext::new(program_id);

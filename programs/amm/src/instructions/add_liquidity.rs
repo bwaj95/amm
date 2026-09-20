@@ -7,7 +7,7 @@ use crate::constants::{LP_MINT_SEED, POOL_SEED};
 use crate::events::LiquidityAdded;
 use crate::state::Pool;
 use crate::utils::calculate_add_liquidity;
-use crate::{LP_MINT_DECIMALS, MINIMUM_LIQUIDITY};
+use crate::LP_MINT_DECIMALS;
 
 use crate::error::AmmError;
 
@@ -43,15 +43,17 @@ pub struct AddLiquidity<'info> {
 
     #[account(
         mut,
-        associated_token::mint = mint_a,
-        associated_token::authority = pool
+        address = pool.vault_a,
+        token::mint = mint_a,
+        token::authority = pool
     )]
     pub vault_a: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
-        associated_token::mint = mint_b,
-        associated_token::authority =pool
+        address = pool.vault_b,
+        token::mint = mint_b,
+        token::authority = pool
     )]
     pub vault_b: Box<Account<'info, TokenAccount>>,
 
@@ -172,8 +174,6 @@ pub fn add_liquidity_handler(
         &ctx.accounts.token_program.to_account_info(),
         lp_to_mint,
     )?;
-
-    
 
     emit!(LiquidityAdded {
         pool: ctx.accounts.pool.key(),

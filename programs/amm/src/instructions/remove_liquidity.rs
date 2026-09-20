@@ -1,16 +1,13 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::anchor_utils::{
-    burn_tokens, transfer_tokens_checked, transfer_tokens_checked_with_signer,
-};
-use crate::constants::{POOL_SEED, PROTOCOL_CONFIG_SEED};
+use crate::anchor_utils::{burn_tokens, transfer_tokens_checked_with_signer};
+use crate::constants::POOL_SEED;
 use crate::error::AmmError::{self};
-use crate::events::{LiquidityRemoved, SwapExecuted};
-use crate::state::{Pool, ProtocolConfig, ProtocolTreasury};
-use crate::utils::{calculate_remove_liquidity, calculate_swap, SwapCalculation};
-use crate::{LP_MINT_DECIMALS, LP_MINT_SEED, MINIMUM_LIQUIDITY, TREASURY_SEED};
+use crate::events::LiquidityRemoved;
+use crate::state::Pool;
+use crate::utils::calculate_remove_liquidity;
+use crate::{LP_MINT_DECIMALS, LP_MINT_SEED, MINIMUM_LIQUIDITY};
 
 #[derive(Accounts)]
 pub struct RemoveLiquidity<'info> {
@@ -44,15 +41,17 @@ pub struct RemoveLiquidity<'info> {
 
     #[account(
         mut,
-        associated_token::mint = mint_a,
-        associated_token::authority = pool,
+        address = pool.vault_a,
+        token::mint = mint_a,
+        token::authority = pool
     )]
     pub vault_a: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
-        associated_token::mint = mint_b,
-        associated_token::authority = pool,
+        address = pool.vault_b,
+        token::mint = mint_b,
+        token::authority = pool
     )]
     pub vault_b: Box<Account<'info, TokenAccount>>,
 

@@ -13,7 +13,7 @@ use solana_pubkey::Pubkey;
 use crate::{
     amm::pdas::{
         find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
-        find_protocol_config_pda, find_protocol_treasury_pda,
+        find_protocol_config_pda, find_protocol_treasury_pda, find_vault_a_pda, find_vault_b_pda,
     },
     common::context::TestContext,
 };
@@ -212,6 +212,71 @@ pub fn add_initial_liquidity_ix(
         data: instruction::AddInitialLiquidity {
             amount_token_a,
             amount_token_b,
+        }
+        .data(),
+    };
+
+    instruction
+}
+
+pub fn initialize_pool_with_liquidity_ix(
+    ctx: &TestContext,
+    creator: &Pubkey,
+    mint_a: &Pubkey,
+    mint_b: &Pubkey,
+    amount_token_a: u64,
+    amount_token_b: u64,
+    min_lp_out: u64,
+    deadline: i64,
+) -> Instruction {
+    let program_id = &ctx.program_id;
+
+    let (protocol_config, _) = find_protocol_config_pda(program_id);
+    let (pool, _) = find_pool_pda(program_id, mint_a, mint_b);
+    let (lp_mint, _) = find_lp_mint_pda(program_id, &pool);
+    let (locked_lp_token, _) = find_locked_lp_token_pda(program_id, &pool);
+
+    let (vault_a, _) = find_vault_a_pda(program_id, &pool);
+    let (vault_b, _) = find_vault_b_pda(program_id, &pool);
+
+    let (protocol_treasury, _) = find_protocol_treasury_pda(program_id);
+    let treasury_a = get_associated_token_address(&protocol_treasury, mint_a);
+    let treasury_b = get_associated_token_address(&protocol_treasury, mint_b);
+
+    let provider_token_a_ata = get_associated_token_address(creator, mint_a);
+    let provider_token_b_ata = get_associated_token_address(creator, mint_b);
+    let provider_lp_token = get_associated_token_address(creator, &lp_mint);
+
+    let accounts = accounts::InitializePoolWithLiquidity {
+        creator: *creator,
+        pool,
+        protocol_config,
+        mint_a: *mint_a,
+        mint_b: *mint_b,
+        vault_a,
+        vault_b,
+        treasury_a,
+        treasury_b,
+        protocol_treasury,
+        lp_mint,
+        locked_lp_token,
+        provider_token_a_ata,
+        provider_token_b_ata,
+        provider_lp_token,
+        system_program: system_program::ID,
+        token_program: token::ID,
+        associated_token_program: associated_token::ID,
+    }
+    .to_account_metas(None);
+
+    let instruction = Instruction {
+        program_id: *program_id,
+        accounts,
+        data: instruction::InitializePoolWithLiquidity {
+            amount_token_a,
+            amount_token_b,
+            min_lp_out,
+            deadline,
         }
         .data(),
     };
