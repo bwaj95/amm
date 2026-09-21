@@ -82,7 +82,7 @@ pub struct InitializePoolWithLiquidity<'info> {
     #[account(
         init_if_needed,
         payer = creator,
-        associated_token::mint = mint_a,
+        associated_token::mint = mint_b,
         associated_token::authority = protocol_treasury,
     )]
     pub treasury_b: Box<Account<'info, TokenAccount>>,

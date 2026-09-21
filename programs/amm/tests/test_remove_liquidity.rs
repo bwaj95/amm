@@ -1,26 +1,15 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
 use crate::{
     amm::{
-        accounts::{ata, mint, pool, protocol_config, token_account},
+        accounts::{mint, token_account},
         fixtures::{
-            add_liquidity_as_user, derive_user_pool_accounts, fund_tokens_to_user,
-            pool_reserves_snapshot, remove_liquidity_as_user, setup_initialized_pool, swap_as_user,
+            pool_reserves_snapshot, remove_liquidity_as_user, setup_initialized_pool,
         },
-        mint_tokens::mint_tokens,
-        pdas::{
-            find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
-            find_protocol_config_pda,
-        },
-        structs::InitializedPoolStruct,
     },
     common::context::TestContext,
 };
 use ::amm::{
     self as amm_protocol,
-    error::AmmError,
-    state::protocol_config,
-    utils::{calculate_add_liquidity, calculate_remove_liquidity, calculate_swap},
+    utils::calculate_remove_liquidity,
     MINIMUM_LIQUIDITY,
 };
 use anchor_spl::associated_token::get_associated_token_address;
@@ -33,19 +22,13 @@ pub fn test_remove_liquidity_success() {
     let program_id = amm_protocol::ID;
     let mut ctx = TestContext::new(program_id);
 
-    let future_time = SystemTime::now() + Duration::from_secs(5);
-    let since_the_epoch = future_time
-        .duration_since(UNIX_EPOCH)
-        .expect("Time calculation error.");
-    let deadline = since_the_epoch.as_secs() as i64;
-
     let (pool_struct, _) = setup_initialized_pool(
         &mut ctx,
         500_000_000_000_u64,
         10_000_000_000_u64,
         40_000_000_000_u64,
         10_000_000_u64,
-        deadline,
+        i64::MAX,
     )
     .unwrap();
 

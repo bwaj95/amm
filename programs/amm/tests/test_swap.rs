@@ -1,27 +1,15 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
 use crate::{
     amm::{
-        accounts::{ata, mint, pool, protocol_config, token_account},
+        accounts::{protocol_config, token_account},
         fixtures::{
-            add_liquidity_as_user, derive_user_pool_accounts, fund_tokens_to_user,
-            pool_reserves_snapshot, setup_initialized_pool, swap_as_user,
+            fund_tokens_to_user, pool_reserves_snapshot, setup_initialized_pool, swap_as_user,
         },
-        mint_tokens::mint_tokens,
-        pdas::{
-            find_locked_lp_token_pda, find_lp_mint_pda, find_mint_pda, find_pool_pda,
-            find_protocol_config_pda,
-        },
-        structs::InitializedPoolStruct,
     },
     common::context::TestContext,
 };
 use ::amm::{
     self as amm_protocol,
-    error::AmmError,
-    state::protocol_config,
-    utils::{calculate_add_liquidity, calculate_swap},
-    MINIMUM_LIQUIDITY,
+    utils::calculate_swap,
 };
 use anchor_spl::associated_token::get_associated_token_address;
 
@@ -33,19 +21,13 @@ pub fn test_swap_a_to_b_success() {
     let program_id = amm_protocol::ID;
     let mut ctx = TestContext::new(program_id);
 
-    let future_time = SystemTime::now() + Duration::from_secs(5);
-    let since_the_epoch = future_time
-        .duration_since(UNIX_EPOCH)
-        .expect("Time calculation error.");
-    let deadline = since_the_epoch.as_secs() as i64;
-
     let (pool_struct, _) = setup_initialized_pool(
         &mut ctx,
         500_000_000_000_u64,
         10_000_000_000_u64,
         40_000_000_000_u64,
         10_000_000_u64,
-        deadline,
+        i64::MAX,
     )
     .unwrap();
 
@@ -56,8 +38,6 @@ pub fn test_swap_a_to_b_success() {
 
     // Destination ATA, might not exist yet.
     let bob_token_b = get_associated_token_address(&bob, &pool_struct.mint_b);
-    let bob_token_b = get_associated_token_address(&bob, &pool_struct.mint_b);
-    let pool_before = pool_reserves_snapshot(&ctx, &pool_struct.pool);
     let bob_a_before = token_account(&ctx, &bob_token_a).amount;
     let treasury_a_before = token_account(&ctx, &pool_struct.treasury_a).amount;
 
@@ -74,23 +54,7 @@ pub fn test_swap_a_to_b_success() {
     )
     .unwrap();
 
-    // let slippage_percentage: u32 = 1;
-    // let max_amount_out_percentage: u32 = 100 - slippage_percentage;
-    // println!("max_amount_out_percentage: {}", max_amount_out_percentage);
-
-    // let min_amount_out_u128 = (amount_in as u128)
-    //     .checked_mul(max_amount_out_percentage as u128)
-    //     .ok_or(AmmError::MathOverflow)
-    //     .unwrap()
-    //     .checked_div(100 as u128)
-    //     .ok_or(AmmError::DivisionError)
-    //     .unwrap();
-    // let min_amount_out = u64::try_from(min_amount_out_u128).unwrap();
-
     let min_amount_out = swap_calculation.amount_out;
-
-    println!("am out: {:?}", swap_calculation.amount_out);
-    println!("min am out: {:?}", min_amount_out);
 
     let pool_after = swap_as_user(
         &mut ctx,

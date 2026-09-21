@@ -1,15 +1,11 @@
-use amm::initialize_pool_with_liquidity;
 use anchor_spl::associated_token::get_associated_token_address;
-use litesvm::{types::FailedTransactionMetadata, LiteSVM};
-use solana_keypair::Keypair;
+use litesvm::types::FailedTransactionMetadata;
 use solana_pubkey::Pubkey;
 
 use crate::{
     amm::{
-        accounts::{mint, pool, protocol_treasury, token_account},
-        add_initial_liquidity::add_initial_liquidity,
+        accounts::{mint, pool, token_account},
         add_liquidity::add_liquidity,
-        create_pool::create_pool,
         initialize_mint::initialize_mint,
         initialize_pool_with_liquidity::initialize_pool_with_liquidity,
         initialize_protocol::initialize_protocol,
@@ -20,7 +16,7 @@ use crate::{
         },
         remove_liquidity::remove_liquidity,
         structs::{InitializedPoolStruct, PoolReservesSnapshot, UserPoolAccounts},
-        swap::{self, swap},
+        swap::swap,
     },
     common::context::TestContext,
 };
@@ -126,8 +122,7 @@ pub fn add_liquidity_as_user(
     add_liquidity(
         ctx,
         user,
-        &pool_struct.mint_a,
-        &pool_struct.mint_b,
+        pool_struct,
         max_a,
         max_b,
     )?;
@@ -148,8 +143,7 @@ pub fn swap_as_user(
     swap(
         ctx,
         user,
-        &pool_struct.mint_a,
-        &pool_struct.mint_b,
+        pool_struct,
         amount_in,
         min_amount_out,
         a_to_b,
@@ -232,8 +226,7 @@ pub fn remove_liquidity_as_user(
     remove_liquidity(
         ctx,
         provider,
-        &pool_struct.mint_a,
-        &pool_struct.mint_b,
+        pool_struct,
         lp_amount,
         min_amount_a,
         min_amount_b,

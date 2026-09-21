@@ -1,10 +1,13 @@
 use litesvm::types::{FailedTransactionMetadata, TransactionMetadata};
+use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_pubkey::Pubkey;
 
 use crate::{
     amm::instructions::initialize_pool_with_liquidity_ix,
     common::{context::TestContext, executor::execute_transaction},
 };
+
+const INITIALIZE_POOL_COMPUTE_UNIT_LIMIT: u32 = 400_000;
 
 pub fn initialize_pool_with_liquidity(
     ctx: &mut TestContext,
@@ -28,6 +31,13 @@ pub fn initialize_pool_with_liquidity(
         min_lp_out,
         deadline,
     );
+    let compute_budget_ix =
+        ComputeBudgetInstruction::set_compute_unit_limit(INITIALIZE_POOL_COMPUTE_UNIT_LIMIT);
 
-    execute_transaction(&mut ctx.svm, &provider, &[signer], &[ix])
+    execute_transaction(
+        &mut ctx.svm,
+        &provider,
+        &[signer],
+        &[compute_budget_ix, ix],
+    )
 }

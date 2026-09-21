@@ -141,6 +141,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "litesvm",
+ "solana-compute-budget-interface",
  "solana-keypair",
  "solana-message 3.1.0",
  "solana-program",

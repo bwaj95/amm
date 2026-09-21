@@ -2,15 +2,14 @@ use litesvm::types::{FailedTransactionMetadata, TransactionMetadata};
 use solana_pubkey::Pubkey;
 
 use crate::{
-    amm::instructions::remove_liquidity_ix,
+    amm::{instructions::remove_liquidity_ix, structs::InitializedPoolStruct},
     common::{context::TestContext, executor::execute_transaction},
 };
 
 pub fn remove_liquidity(
     ctx: &mut TestContext,
     provider: &Pubkey,
-    mint_a: &Pubkey,
-    mint_b: &Pubkey,
+    initialized_pool: &InitializedPoolStruct,
     lp_amount: u64,
     min_amount_a: u64,
     min_amount_b: u64,
@@ -28,8 +27,7 @@ pub fn remove_liquidity(
     let ix = remove_liquidity_ix(
         ctx,
         provider,
-        mint_a,
-        mint_b,
+        initialized_pool,
         lp_amount,
         min_amount_a,
         min_amount_b,
